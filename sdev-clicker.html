@@ -809,7 +809,6 @@ function renderHeader(){
       const proj = (currentProjects()||[]).find(p=>p.id===state.currentProjectId) || null;
       elCurProj.textContent = proj ? proj.name : (state.currentProjectId || '—');
     }
-    
   // update developer profile card
   try{ if(typeof updateDeveloperProfile === 'function') updateDeveloperProfile(); }catch(e){}
     // show chosen framework

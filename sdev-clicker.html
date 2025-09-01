@@ -1,0 +1,2928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Career Clicker — Pixel Incremental</title>
+<style>
+  /* Phase 1: UI & Clarity */
+  :root{
+    --bg:#0f0f1a;
+    --panel:#1a1a2d;
+    --panel2:#131326;
+    --text:#e6e6f0;
+    --accent:#7de37d;
+    --accent2:#7db7e3;
+    --danger:#e37d7d;
+    --gold:#ffd35a;
+    --dim:#9aa0a6;
+  }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:linear-gradient(#0b0b15, #12122a);
+    color:var(--text); font-family: "Courier New", monospace;
+  }
+  * { box-sizing:border-box; }
+  #wrap{
+    display:grid; gap:10px; padding:10px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    max-width: 1200px; margin: 0 auto;
+  }
+  header{
+    grid-column:1 / -1;
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel); border:1px solid #26264a; border-radius:8px;
+    padding:8px 12px; box-shadow:0 0 0 2px #0a0a18 inset;
+  }
+  /* Main content area: two columns on desktop, single column on small screens */
+  #mainContent{
+    display:grid; grid-template-columns: 1fr 340px; gap:10px; align-items:start;
+  }
+  @media (max-width: 900px){
+    /* collapse to single column on small screens */
+    #mainContent{ grid-template-columns: 1fr; }
+    /* make header and main stack naturally */
+    #wrap{ padding:8px; }
+    .shopControls .filterBtn{ padding:6px 8px; }
+  }
+  .hdr-left{ display:flex; align-items:center; gap:12px; min-width:220px; }
+  .hdr-center{ flex:1; display:flex; align-items:center; justify-content:center; }
+  .hdr-right{ display:flex; align-items:center; gap:8px; }
+  .hdr-persona strong, #seniority{ color:var(--accent2); }
+  .dash-pill{ background:var(--panel2); padding:6px 10px; border-radius:6px; border:1px solid #2a2a4d; box-shadow:0 0 0 2px #0a0a18 inset; font-weight:bold; }
+  .mishapConsole{ background:#06060a; border:1px solid #202036; padding:8px; border-radius:6px; margin-top:8px; font-family: monospace; color:#cbd5e1; }
+  .mishapConsole.info{ color:#9be79b; }
+  .mishapConsole.warn{ color:#ffd76b; }
+  .mishapConsole.error{ color:#ff9b9b; }
+  .tabbtn.disabled{ opacity:0.5; cursor:not-allowed; }
+  .toast{ position:fixed; top:16px; left:50%; transform:translateX(-50%); background:rgba(20,20,36,0.96); border:1px solid #2a2a4d; padding:10px 14px; border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,0.6); z-index:60; font-weight:bold; }
+  .toast.info{ color:var(--accent2); }
+  .toast.warn{ color:#ffd76b; }
+  .toast.error{ color:var(--danger); }
+  .tab-badge{ display:inline-block; background:var(--gold); color:#081018; font-weight:bold; padding:2px 6px; border-radius:999px; margin-left:6px; font-size:12px; line-height:12px; min-width:18px; text-align:center; }
+  @keyframes promoPulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 211, 90, 0.0); transform:scale(1); }
+    50% { box-shadow: 0 6px 18px 6px rgba(255, 211, 90, 0.12); transform:scale(1.02); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 211, 90, 0.0); transform:scale(1); }
+  }
+  .promoBanner.pulse{ animation: promoPulse 2.2s ease-in-out infinite; }
+  /* Agents / avatars */
+  .agentRow{ display:flex; gap:6px; align-items:center; }
+  .agentAvatar{ width:20px; height:20px; border-radius:50%; background:linear-gradient(180deg,#9be79b,#58c15a); box-shadow:0 2px 6px rgba(0,0,0,0.5); display:inline-block; transform:scale(1); }
+  .agentAvatar.small{ width:14px; height:14px; }
+  /* Phase 1: UI & Clarity */
+  /* Developer profile badges */
+  .dev-profile{ background:linear-gradient(180deg,var(--panel2), var(--panel)); border:1px solid #2a2a4d; padding:8px; border-radius:8px; }
+  .dev-badges{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .dev-badge{ padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06); background:rgba(0,0,0,0.08); font-weight:600; font-size:13px; }
+  .dev-badge .label{ color:var(--dim); font-weight:500; margin-right:6px; }
+  .dev-mults{ display:flex; gap:12px; flex-wrap:wrap; font-size:13px; }
+  .dev-mult{ background:var(--panel2); padding:6px 10px; border-radius:6px; border:1px solid #22253a; }
+  /* Progress bars */
+  .progress{ width:100%; background:rgba(0,0,0,0.06); border-radius:6px; height:14px; overflow:hidden; border:1px solid rgba(0,0,0,0.12); }
+  .progress-fill{ height:100%; background:linear-gradient(90deg,var(--accent), var(--gold)); width:0%; transition:width 300ms ease; }
+  .progress-row{ display:flex; align-items:center; gap:8px; }
+  .progress-label{ font-size:12px; color:var(--dim); min-width:120px; }
+  @keyframes recruitPulse { 0%{ transform:scale(0.6); opacity:0 } 50%{ transform:scale(1.25); opacity:1 } 100%{ transform:scale(1); opacity:1 } }
+  .recruitAnim{ animation: recruitPulse 600ms cubic-bezier(.2,.9,.2,1); box-shadow:0 8px 20px rgba(88,193,90,0.28); }
+  /* Respect user reduced motion preference */
+  @media (prefers-reduced-motion: reduce){
+    .recruitAnim, .promoBanner.pulse, .confetti{ animation: none !important; transition: none !important; }
+    .progress-fill{ transition: none !important; }
+  }
+  /* Retirement / confetti animation */
+  .confetti{ position:fixed; width:10px; height:14px; opacity:0.95; z-index:80; pointer-events:none; transform:translateY(-10px); animation: confettiFall 2200ms linear forwards; }
+  @keyframes confettiFall { to { transform: translateY(110vh) rotate(360deg); opacity:1; } }
+  #retirementOverlay{ display:none; position:fixed; left:0; top:0; right:0; bottom:0; align-items:center; justify-content:center; background:rgba(2,2,10,0.96); z-index:90; }
+  #retirementOverlay .panel{ max-width:640px; text-align:center; }
+  .stat{
+    display:flex; gap:12px; align-items:center; font-weight:bold;
+  }
+  .pill{
+    background:var(--panel2); padding:6px 10px; border-radius:6px;
+    border:1px solid #2a2a4d; box-shadow:0 0 0 2px #0a0a18 inset;
+  }
+  #tabs{ display:flex; gap:6px; }
+  .tabbtn{
+    cursor:pointer; border:none; color:var(--text);
+    background:var(--panel2); padding:6px 10px; border-radius:6px;
+    border:1px solid #2a2a4d; font-weight:bold;
+  }
+  .tabbtn.active{ outline:2px solid var(--accent2); }
+  #left{
+    background:var(--panel); border:1px solid #26264a; border-radius:8px;
+    display:flex; flex-direction:column; padding:8px; gap:8px;
+  }
+  #canvasWrap{
+    background:var(--panel2); border:1px solid #2a2a4d; border-radius:8px;
+    padding:8px; display:flex; flex-direction:column; gap:8px;
+    box-shadow:0 0 0 2px #0a0a18 inset;
+  }
+  #clickTip{ font-size:12px; color:var(--dim); text-align:center; }
+  #right{
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .panel{
+    background:var(--panel); border:1px solid #26264a; border-radius:8px;
+    padding:8px; box-shadow:0 0 0 2px #0a0a18 inset;
+  }
+  .list{ display:flex; flex-direction:column; gap:6px; }
+  .row{
+    display:grid; grid-template-columns: 1fr auto; gap:6px; align-items:center;
+    background:var(--panel2); border:1px solid #2a2a4d; border-radius:6px; padding:6px;
+  }
+  .row h4{ margin:0 0 2px 0; font-size:14px; }
+  .row p{ margin:0; font-size:12px; color:var(--dim); }
+  .row button{
+    cursor:pointer; border:none; color:#0d0d14; background:var(--gold); font-weight:bold;
+    padding:6px 10px; border-radius:5px; min-width:90px;
+  }
+  .row button:disabled{ opacity:0.5; cursor:not-allowed; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .choice{
+    background:var(--panel2); border:1px solid #2a2a4d; border-radius:6px; padding:8px;
+  }
+  .choice h4{ margin:0 0 6px 0; }
+  .choice button{
+    cursor:pointer; border:none; color:#0d0d14; background:var(--accent);
+    font-weight:bold; padding:6px 10px; border-radius:5px;
+  }
+  .choice .picked{ background:var(--accent2); }
+  #footerBtns { display:flex; gap:8px; }
+  #footerBtns button{
+    cursor:pointer; border:1px solid #2a2a4d; color:var(--text); background:var(--panel2);
+    font-weight:bold; padding:6px 10px; border-radius:6px;
+  }
+
+  /* Phase 1: Shop group and filter styles */
+  .shopControls {
+    padding: 6px 0 10px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    margin-bottom:8px;
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .shopControls .filterBtn{
+    padding:6px 10px;
+    border:1px solid #2a2a4d;
+    background:var(--panel2);
+    cursor:pointer;
+    border-radius:6px;
+    color:var(--text);
+    font-weight:700;
+    font-size:13px;
+    min-width:72px;
+    text-align:center;
+  }
+  .shopControls .filterBtn.active{
+    background:var(--accent2);
+    border-color: rgba(255,255,255,0.06);
+    color:#081018;
+  }
+  .shopControls .filterBtn:hover{ filter:brightness(1.05); }
+  .shopGroupHeader{ margin-top:10px; margin-bottom:6px; padding:6px 0; border-bottom:1px dashed rgba(0,0,0,0.05); }
+  .shopGroupHeader h3{ margin:0; font-size:1rem; color:var(--text) }
+  .shopGroupHeader p.small{ margin:0; color:#9aa0a6; font-size:0.8rem; }
+  .small{ font-size:12px; color:var(--dim); }
+  canvas{ image-rendering: pixelated; width:100%; max-height:60vh; background:#0b0b18; border-radius:6px; border:1px solid #2a2a4d; }
+
+  /* Game feel additions */
+  .bounce { animation: clickBounce 220ms cubic-bezier(.2,.9,.2,1); }
+  @keyframes clickBounce { 0%{ transform: translateY(0) scale(1); } 50%{ transform: translateY(-6px) scale(1.03); } 100%{ transform: translateY(0) scale(1); } }
+  .floaty { position: absolute; pointer-events:none; font-weight:700; text-shadow:0 2px 4px rgba(0,0,0,0.6); transform-origin:center; will-change: transform, opacity; }
+  .pixelParticle { width:6px; height:6px; position:absolute; background:#ffd35a; box-shadow: 0 0 0 0 rgba(0,0,0,0.5); pointer-events:none; image-rendering:pixelated; }
+
+  /* Seniority themes applied to body or container */
+  .theme-junior body, .theme-junior #canvasWrap canvas { background: linear-gradient(#0b0b18, #101020); }
+  .theme-mid body, .theme-mid #canvasWrap canvas { background: linear-gradient(90deg,#07121a,#0b1a2b); }
+  .theme-senior body, .theme-senior #canvasWrap canvas { background: linear-gradient(90deg,#0b1620,#071622); }
+  .theme-lead body, .theme-lead #canvasWrap canvas { background: linear-gradient(90deg,#09121a,#13222d); }
+
+  /* small pixel icons used in task lists */
+  .taskIcon{ width:18px; height:18px; display:inline-block; margin-right:6px; vertical-align:middle; font-size:14px }
+
+  /* Start overlay styles */
+  #startOverlay{
+    position:fixed; left:0; top:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(5,5,12,0.75); z-index:20;
+  }
+  .overlayPanel{
+    width:720px; max-width:95%; background:var(--panel); border:1px solid #26264a; border-radius:8px; padding:16px;
+    box-shadow:0 6px 30px rgba(0,0,0,0.6);
+  }
+  .overlayPanel h2{ margin:0 0 8px 0 }
+  .overlayChoice{ background:var(--panel2); border:1px solid #2a2a4d; border-radius:6px; padding:8px; margin:6px 0; }
+  .overlayChoice button{ cursor:pointer; border:none; color:#0d0d14; background:var(--accent); font-weight:bold; padding:6px 10px; border-radius:5px; }
+  .overlayChoice .picked{ background:var(--accent2); }
+
+  /* Generic modal backdrop for transient overlays (random events) */
+  .modalBackdrop{ position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(5,5,12,0.7); z-index:120; display:flex; align-items:flex-start; justify-content:center; padding-top:10vh; }
+  .modalBackdrop .overlayPanel{ z-index:121; }
+  .btn-yellow{ cursor:pointer; border:none; color:#0d0d14; background:var(--gold); font-weight:bold; padding:8px 12px; border-radius:6px; }
+  .btn-yellow.secondary{ background:var(--accent); }
+
+  /* Mobile Shop overlay tweaks */
+  .shopOverlay .overlayPanel{ width:96%; height:92vh; overflow:auto; max-width:720px; }
+  #openShopOverlayBtn{ display:none; }
+  @media (max-width: 720px){
+    #openShopOverlayBtn{ display:inline-block; }
+  /* hide the side shop panel on mobile; use overlay instead */
+  #panel-shop{ display:none !important; }
+  }
+
+  /* Promotion overlay styles */
+  #promotionOverlay{
+    position:fixed; left:0; top:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(5,5,12,0.8); z-index:25;
+  }
+</style>
+</head>
+<body>
+  <!-- Floating layer for transient visuals (numbers, particles) -->
+  <div id="fxLayer" style="position:fixed; left:0; top:0; right:0; bottom:0; pointer-events:none; z-index:70;"></div>
+  <!-- Audio: short SFXs embedded as base64 small WAV or simple data URLs (placeholders) -->
+  <!-- Audio fallback elements (kept for browsers without WebAudio or user-supplied files) -->
+  <audio id="sfxClick" src="" preload="auto"></audio>
+  <audio id="sfxXP" src="" preload="auto"></audio>
+  <audio id="sfxProject" src="" preload="auto"></audio>
+  <audio id="sfxLevel" src="" preload="auto"></audio>
+  <div id="wrap">
+    <header>
+      <div style="display:flex; align-items:center; gap:12px; width:100%; justify-content:space-between;">
+        <div style="display:flex; gap:10px; align-items:center;">
+          <div class="dash-pill" role="status" aria-live="polite">✨ <span id="xp" aria-label="experience points">0</span></div>
+          <div class="dash-pill" role="status" aria-live="polite">🪙 <span id="coins" aria-label="coins">0</span></div>
+          <div class="dash-pill" role="status" aria-live="polite">📈 <span id="seniority" aria-label="seniority level">Junior</span></div>
+          <div class="dash-pill" role="status" aria-live="polite">🤖 <span id="agentsCount" aria-label="agent count">0</span></div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button id="moreBtn" class="tabbtn" aria-expanded="false" aria-controls="moreDrawer" aria-label="Show more developer details">More</button>
+          <button id="openShopOverlayBtn" class="tabbtn" aria-label="Open Shop in full-screen">🛒 Shop</button>
+        </div>
+      </div>
+      <!-- compact header only; extra details moved into collapsible drawer below -->
+    </header>
+
+    <!-- Collapsible drawer hidden by default; toggled by #moreBtn -->
+    <div id="moreDrawer" style="display:none; padding:8px; margin:8px 0; background:var(--panel); border:1px solid #26264a; border-radius:6px;" aria-hidden="true" role="region" aria-label="Additional developer details">
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="pill" role="group" aria-label="Persona">👤 Persona: <strong id="persona">—</strong></div>
+        <div class="pill" role="group" aria-label="Workstyle">💼 Workstyle: <strong id="workstyle">—</strong></div>
+        <div class="pill" role="group" aria-label="Framework">🧰 Framework: <strong id="frameworks">—</strong></div>
+        <div class="pill" role="group" aria-label="Current project">📂 Current Project: <strong id="currentProject">—</strong></div>
+      </div>
+      <div style="margin-top:8px; display:flex; gap:8px; flex-direction:column;">
+        <div class="small">Click Multiplier: <strong id="dp-clickMult">1.00x</strong></div>
+        <div class="small">Passive XP/sec: <strong id="dp-passive">0.00</strong></div>
+        <div class="small">Project Bonus: <strong id="dp-projectBonus">—</strong></div>
+  <div class="small">Base Click Power: <strong id="dp-baseClick">1.00</strong></div>
+      </div>
+      <div style="margin-top:8px;">
+        <label style="display:flex;align-items:center;gap:8px;">Audio Style: <button id="sfxStyleOption" style="padding:6px 8px;border-radius:6px;background:var(--panel2);border:1px solid #2a2a4d;color:var(--text);">mech</button></label>
+      </div>
+      
+    </div>
+
+    <main id="mainContent">
+      <section id="left">
+      <!-- small avatar / pixel sprite in canvas header -->
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+        <div id="personaAvatar" style="width:48px; height:48px; border-radius:6px; background:linear-gradient(180deg,#222,#111); display:flex; align-items:center; justify-content:center; font-weight:bold;">👩‍💻</div>
+  
+        <div style="flex:1">
+          <div style="font-weight:bold;">Career Clicker</div>
+          <div style="font-size:12px; color:var(--dim);">Pixel incremental clicker</div>
+        </div>
+      </div>
+      <div id="canvasWrap">
+    <!-- Inline tasks/projects panel displayed above the canvas for quick access -->
+    <div id="tasksPanelInline" class="panel" style="margin-bottom:8px; display:block;">
+      <h3>Current Project & Tasks</h3>
+  <div class="list" id="tasksInlineList" style="min-height:140px"></div>
+      <div id="mishapConsole" class="mishapConsole small" title="Recent event">[INFO] No recent events.</div>
+    </div>
+  <canvas id="game" width="192" height="192" role="img" aria-label="Game canvas showing your character"></canvas>
+    <div id="clickTip">Click the character to work and earn coins! Big combos = shiny particles ✨</div>
+
+  <!-- Developer Profile removed from main view; key stats moved into More drawer for mobile -->
+  <!-- mishap console moved into the inline tasks panel above -->
+      </div>
+      <div id="footerBtns">
+        <button id="saveBtn">💾 Save</button>
+        <button id="loadBtn">📂 Load</button>
+        <button id="resetBtn">🗑️ Reset</button>
+        <span class="small" id="saveStatus">Autosaves every 10s</span>
+      </div>
+  </section>
+
+  <aside id="right">
+      <div id="panel-shop" class="panel">
+        <h3>Upgrade Shop</h3>
+        <div class="list" id="shopList"></div>
+      </div>
+
+      <div id="panel-skills" class="panel" style="display:none">
+        <h3>Skill Tree</h3>
+        <p class="small">
+          Unlock nodes to boost your career. Some require a specific Career/Workstyle.
+        </p>
+        <div class="list" id="skillList"></div>
+      </div>
+
+      <div id="panel-character" class="panel" style="display:none">
+        <h3>My Character</h3>
+        <div id="characterSummary" class="list">
+          <!-- populated by renderCharacterPanel() -->
+        </div>
+      </div>
+
+      <div id="panel-tasks" class="panel" style="display:none">
+        <h3>Tasks</h3>
+        <div class="list" id="tasksList"></div>
+      </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Start overlay forces the player to choose Career & Workstyle before playing -->
+  <div id="startOverlay" style="display:none">
+    <div class="overlayPanel">
+      <h2>Welcome — Choose Your Persona & Workstyle</h2>
+      <p class="small">Pick a Persona and a Workstyle to begin. Gameplay, shop and skills unlock after selection.</p>
+      <div class="grid2">
+        <div>
+          <h4 style="margin:6px 0">Personas</h4>
+          <div id="overlayPersonaList"></div>
+        </div>
+        <div>
+          <h4 style="margin:6px 0">Workstyles</h4>
+          <div id="overlayWorkstyleList"></div>
+        </div>
+      </div>
+  <!-- Audio style control intentionally omitted here; available under More -->
+        <div style="margin-top:12px; text-align:right;">
+          <button id="startBtn" disabled style="cursor:pointer; border:none; color:#0d0d14; background:var(--gold); font-weight:bold; padding:8px 12px; border-radius:6px;">▶ Start</button>
+        </div>
+    </div>
+  </div>
+
+  <!-- Promotion overlay (shown briefly after a promotion) -->
+  <div id="promotionOverlay" style="display:none; position:fixed; left:0; top:0; right:0; bottom:0; align-items:center; justify-content:center; background:rgba(5,5,12,0.8); z-index:25;">
+    <div class="overlayPanel">
+      <h2>Promotion — Choose a Workstyle</h2>
+      <p class="small">As part of your promotion you may select a new Workstyle. Choose one now or close to keep your current Workstyle.</p>
+      <div class="grid2" id="promotionWorkstyleList"></div>
+      <div style="margin-top:10px; text-align:right;"><button id="promotionSkipBtn">Skip</button></div>
+    </div>
+  </div>
+
+  <!-- Framework selection overlay (shown immediately after Mid promotion) -->
+  <div id="frameworkOverlay" style="display:none; position:fixed; left:0; top:0; right:0; bottom:0; align-items:center; justify-content:center; background:rgba(5,5,12,0.9); z-index:30;">
+    <div class="overlayPanel">
+    <h2>Choose a Framework</h2>
+    <div class="promoBanner" style="display:none; background:linear-gradient(90deg,#ffd27f,#ffe9c0); padding:8px; border-radius:6px; margin-bottom:8px;"></div>
+    <p class="small">Frameworks are career toolkit choices that provide milestone bonuses. Choose one now; it cannot be changed until your next promotion.</p>
+      <div id="frameworkList" class="grid2"></div>
+      <div style="margin-top:12px; text-align:right;"><button id="frameworkSkip">Skip</button></div>
+    </div>
+  </div>
+
+  <!-- Lead Project Choice Overlay -->
+  <div id="leadChoiceOverlay" style="display:none; position:fixed; left:0; top:0; right:0; bottom:0; align-items:center; justify-content:center; background:rgba(2,2,10,0.95); z-index:40;">
+    <div style="background:#111; padding:18px; border-radius:8px; width:520px; max-width:92%; color:#fff;">
+      <h3>Choose your project path</h3>
+      <p class="small">Lead the Corporate project for steady, guaranteed rewards, or pick the Startup project for higher upside with risk.</p>
+      <div id="leadChoiceButtons" style="display:flex; gap:10px; margin-top:12px;">
+        <button id="chooseCorporate">Corporate Project</button>
+        <button id="chooseStartup">Startup Project</button>
+      </div>
+      <div style="margin-top:12px;" id="leadChoiceInfo"></div>
+    </div>
+  </div>
+
+  <!-- Leadership Skills Panel (hidden until unlocked) -->
+  <div id="leadSkillsPanel" style="display:none; position:fixed; right:12px; bottom:12px; width:300px; max-width:90%; z-index:20;">
+    <div style="background:#0f1720; padding:10px; border-radius:8px; color:#fff;">
+      <h4>Leadership Skills</h4>
+      <div id="leadSkillList"></div>
+    </div>
+  </div>
+
+  <!-- Retirement / Game Over Overlay -->
+  <div id="retirementOverlay">
+    <div class="overlayPanel panel">
+      <h2>Retirement — Career Complete 🎉</h2>
+      <p class="small">You've led teams, survived crises, and shaped a product — time to retire in style.</p>
+      <p id="retireSummary" class="small" style="margin-top:8px;"></p>
+      <div style="margin-top:12px;"><button id="retireCloseBtn">Acknowledge & Restart</button></div>
+      <div style="margin-top:12px; text-align:left;">
+        <h4 style="margin:6px 0 4px 0">Hall of Fame</h4>
+        <div id="hallOfFameList" class="small" style="max-height:180px; overflow:auto; background:rgba(0,0,0,0.12); padding:8px; border-radius:6px;"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* Phase 1: UI & Clarity */
+/* =========================
+   Core State & Helpers
+   ========================= */
+const fmt = (n)=> {
+  if (n>=1e12) return (n/1e12).toFixed(2)+'T';
+  if (n>=1e9)  return (n/1e9).toFixed(2)+'B';
+  if (n>=1e6)  return (n/1e6).toFixed(2)+'M';
+  if (n>=1e3)  return (n/1e3).toFixed(2)+'K';
+  return Math.floor(n).toString();
+};
+
+const state = {
+  coins: 0,
+  totalCoins: 0,
+  clickBase: 1,
+  clickBonus: 0,
+  clickMult: 1,
+  passiveBase: 0,
+  passiveMult: 1,
+  career: null,        // 'dev' | 'design' | 'manager'
+  workstyle: null,     // 'freelancer' | 'startup' | 'corporate'
+  persona: null,       // new: persona choice (e.g. 'egocentric')
+  upgrades: {},        // {id: level}
+  skills: {},          // {id: true}
+  xp: 0,               // new: experience points (secondary currency)
+  linesOfCode: 0,     // new: total lines written (clicks)
+  attributes: {        // new: player attributes (safe defaults)
+    intelligence: 0,
+    focus: 0,
+    creativity: 0,
+    stamina: 0
+  },
+  lastSave: 0,
+  started: false,      // will be true once both career & workstyle chosen
+  seniority: 'Junior', // 'Junior' | 'Mid' | 'Senior' | 'Lead'
+  seniorityGranted: {}, // tracks which promotion bonuses have been applied
+  allowWorkstyleChange: false, // toggled briefly after promotions to allow changing workstyle
+  activeTask: null,    // { id, name, required, progress, salary, desc }
+  accessories: [],       // simple inventory for chance rewards
+  // Projects & Frameworks
+  completedTasks: [],   // track task ids completed (for project progress)
+  completedProjects: [],
+  frameworks: []        // unlocked frameworks (eg 'agileKit', 'startupStack')
+};
+
+// Default state factory so we can reset/merge easily and keep the same `state` reference
+function getDefaultState(){
+  return {
+    coins: 0,
+    totalCoins: 0,
+    clickBase: 1,
+    clickBonus: 0,
+    clickMult: 1,
+    passiveBase: 0,
+    passiveMult: 1,
+    career: null,
+    workstyle: null,
+    persona: null,
+    upgrades: {},
+    skills: {},
+    xp: 0,
+    linesOfCode: 0,
+    attributes: { intelligence:0, focus:0, creativity:0, stamina:0 },
+    lastSave: 0,
+    started: false,
+    seniority: 'Junior',
+    seniorityGranted: {},
+    allowWorkstyleChange: false,
+  allowSkills: false,
+  skillsSeen: false,
+  equipmentSlots: 0,
+  framework: null, // selected framework id
+  frameworkLocked: null, // seniority stage when locked
+  rareAccessoriesUnlocked: false,
+    activeTask: null,
+    accessories: [],
+    completedTasks: [],
+    completedProjects: [],
+    frameworks: [],
+  currentProjectId: null,
+  mishapLog: [],
+  agents: { count:0, level:0, xpPerAgent:1, cap:3 },
+  // Lead-level/leadership state
+  leadChoices: {},            // map projectId -> 'corporate'|'startup'
+  allowLeadership: false,     // whether leadership mechanic is unlocked
+  leadSkillsUnlocked: false,  // unlocks leadership skill tree
+  leadershipSkills: {},       // purchased leadership skills
+    totalXp: 0,
+    seniorityXpMult: 1,
+    senioritySalaryMult: 1
+  ,
+  gameOver: false
+  };
+}
+
+// initialize any missing fields from defaults (for older saves)
+Object.assign(state, getDefaultState(), state);
+
+// ensure backward-compatible fields for new seniority/XP tracking
+state.totalXp = state.totalXp || 0;
+state.seniorityXpMult = state.seniorityXpMult || 1;   // permanent XP multiplier from seniority
+state.senioritySalaryMult = state.senioritySalaryMult || 1; // permanent salary multiplier from seniority
+
+// Seniority thresholds and permanent bonuses (applied once per level)
+const SENIORITY_TIERS = [
+  { id:'Junior', threshold:0 },
+  { id:'Mid',    threshold:5000 },    // total XP thresholds
+  { id:'Senior', threshold:50000 },
+  { id:'Lead',   threshold:500000 },
+];
+
+function celebratePromotion(tierId){
+  try{
+    // small visual celebration: flash header and spawn a few floaties
+    const hdr = document.querySelector('header');
+    if(hdr){
+      hdr.style.transition = 'box-shadow 0.2s ease';
+      const orig = hdr.style.boxShadow;
+      hdr.style.boxShadow = '0 0 20px 3px rgba(125,227,125,0.8)';
+      setTimeout(()=> hdr.style.boxShadow = orig, 900);
+    }
+    saveStatus.textContent = `Promoted to ${tierId}!`; 
+    // spawn a few small floaties near the header
+    for(let i=0;i<8;i++){
+      const f = document.createElement('div');
+      f.textContent = '✨';
+      f.style.position = 'fixed';
+      f.style.left = (50 + Math.random()*60) + '%';
+      f.style.top = (5 + Math.random()*5) + '%';
+      f.style.fontSize = (12 + Math.random()*16) + 'px';
+      f.style.pointerEvents = 'none';
+      document.body.appendChild(f);
+      setTimeout(()=> f.remove(), 1200 + Math.random()*800);
+    }
+    setTimeout(()=> saveStatus.textContent='Autosaves every 10s', 2000);
+  // play level-up sound
+  playSfx('sfxLevel');
+  }catch(e){ /* ignore visual errors */ }
+}
+
+function checkSeniorityPromotions(){
+  // Promote based on total XP earned
+  for(const tier of SENIORITY_TIERS){
+    if(state.totalXp >= tier.threshold && !state.seniorityGranted[tier.id]){
+      // apply promotion (skip Junior since it's the default and threshold 0)
+      if(tier.id !== 'Junior'){
+        state.seniority = tier.id;
+        // permanent multipliers: +5% XP per promotion, +5% salary per promotion
+        state.seniorityXpMult = (state.seniorityXpMult || 1) * 1.05;
+        state.senioritySalaryMult = (state.senioritySalaryMult || 1) * 1.05;
+        state.seniorityGranted[tier.id] = true;
+        // Visual feedback for promotion
+        celebratePromotion(tier.id);
+  // schedule save and update UI
+  scheduleSave();
+        renderHeader();
+        // small delay before showing any further overlays
+        setTimeout(()=>{}, 400);
+      } else {
+        state.seniorityGranted[tier.id] = true;
+      }
+    }
+  }
+}
+
+function getCareerBonus() {
+  // passive and click multipliers per career
+  switch(state.career){
+    case 'dev':     return { click:1.15, passive:1.05 };
+    case 'design':  return { click:1.10, passive:1.10 };
+    case 'manager': return { click:1.05, passive:1.20 };
+    default:        return { click:1.00, passive:1.00 };
+  }
+}
+
+// Workstyles are now a data-driven list with explicit modifier objects
+const WORKSTYLES = [
+  { id:'freelancer', name:'Freelancer', mods:{ click:1.20, passive:0.95 }, bonus:'Click +20%, Passive -5%', attributes:{ intelligence:0, focus:1, creativity:2, stamina:0 } },
+  { id:'startup',    name:'Startup Team', mods:{ click:1.10, passive:1.10 }, bonus:'Click +10%, Passive +10%', attributes:{ intelligence:1, focus:1, creativity:2, stamina:0 } },
+  { id:'corporate',  name:'Corporate', mods:{ click:0.95, passive:1.25 }, bonus:'Click -5%, Passive +25%', attributes:{ intelligence:1, focus:2, creativity:0, stamina:2 } },
+];
+
+function personaXpMult(){ const m = getPersonaMods(); return (m.xpMult || 1); }
+
+function getWorkstyleAttributes(){
+  const w = WORKSTYLES.find(x=>x.id===state.workstyle);
+  if(!w || typeof w.attributes !== 'object') return { intelligence:0, focus:0, creativity:0, stamina:0 };
+  return Object.assign({ intelligence:0, focus:0, creativity:0, stamina:0 }, w.attributes);
+}
+
+function applyStartingAttributes(){
+  const attrsEmpty = Object.values(state.attributes).every(v=>v===0);
+  if(!attrsEmpty) return;
+  const pAttrs = getPersonaAttributes();
+  const wAttrs = getWorkstyleAttributes();
+  state.attributes = {
+    intelligence: (pAttrs.intelligence||0) + (wAttrs.intelligence||0),
+    focus:        (pAttrs.focus||0)        + (wAttrs.focus||0),
+    creativity:   (pAttrs.creativity||0)   + (wAttrs.creativity||0),
+    stamina:      (pAttrs.stamina||0)      + (wAttrs.stamina||0),
+  };
+}
+
+function checkStart(){
+  if(state.persona && state.workstyle){
+    const wasStarted = state.started;
+    state.started = true;
+    overlay.style.display = 'none';
+    if(!wasStarted){ applyStartingAttributes(); }
+  scheduleSave();
+  // ensure tasks list renders immediately on start
+  try{ renderTasks(); }catch(e){}
+  } else {
+    // not started yet, ensure overlay visible and game locked
+    overlay.style.display = 'flex';
+  }
+  try{ updateGameInteractivity(); }catch(e){}
+}
+
+/* =========================
+   Game Loop & Click Handling
+   ========================= */
+const TICK_INTERVAL = 1000; // ms
+let lastTick = Date.now();
+let nextTick = lastTick + TICK_INTERVAL;
+
+function gameLoop(){
+  const now = Date.now();
+  if(now >= nextTick){
+    nextTick = now + TICK_INTERVAL;
+    updateTotals();
+    checkSeniorityPromotions();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+// ensure canvas element is referenced before any listeners/use
+const canvas = document.getElementById('game');
+const ctx = canvas ? canvas.getContext('2d') : null;
+
+canvas.addEventListener('click', (e)=>{
+  // Only register clicks if the game has started
+  if(!state.started) return;
+  // Track click position for potential future features (e.g. crits)
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / (rect.width / 192));
+  const y = Math.floor((e.clientY - rect.top) / (rect.height / 192));
+  handleClick(x,y);
+});
+
+const elCoins   = document.getElementById('coins');
+const elXP      = document.getElementById('xp');
+const elPerClick= document.getElementById('perClick');
+const elPerSec  = document.getElementById('perSec');
+const elMult    = document.getElementById('mult');
+const elPersona = document.getElementById('persona');
+const elWorkstyle = document.getElementById('workstyle');
+const elAttributes = document.getElementById('attributes');
+const elLOC     = document.getElementById('loc');
+const elAgentsCount = document.getElementById('agentsCount');
+// safe reference to seniority element (may not exist in some layouts)
+const elSeniority = (function(){
+  const el = document.getElementById('seniority');
+  return el || { textContent: '' };
+})();
+
+// New: safe DOM handles for overlays and status used throughout the code
+const overlay = document.getElementById('startOverlay') || { style: { display: 'none' } };
+const promotionOverlay = document.getElementById('promotionOverlay') || { style: { display: 'none' } };
+const saveStatus = document.getElementById('saveStatus') || { textContent: '' };
+
+// Enable/disable canvas interactions while waiting at the start overlay
+function updateGameInteractivity(){
+  try{
+    const c = document.getElementById('game');
+    if(!c) return;
+  if(state.started && (window.__modalCount||0) === 0){
+      c.style.pointerEvents = 'auto';
+      c.style.filter = '';
+    } else {
+      c.style.pointerEvents = 'none';
+      // subtle dim to indicate locked state
+      c.style.filter = 'grayscale(0.2) brightness(0.9)';
+    }
+  }catch(e){}
+}
+
+// Lightweight modal lock for temporary overlays (e.g., random events)
+window.__modalCount = 0;
+function enterModal(){ try{ window.__modalCount = (window.__modalCount||0) + 1; updateGameInteractivity(); }catch(e){} }
+function exitModal(){ try{ window.__modalCount = Math.max(0, (window.__modalCount||0) - 1); updateGameInteractivity(); }catch(e){} }
+
+// Backwards-compatible wrapper: renderShop may be referenced in several places — call updateShop if available
+function renderShop(){ if(typeof updateShop === 'function') return updateShop(); }
+
+function totalClickPower(){
+  // base click + permanent bonus and multipliers (conservative estimate)
+  const base = (state.clickBase || 1) + (state.clickBonus || 0);
+  const mult = (state.clickMult || 1) * (getCareerBonus().click || 1) * (getWorkstyleBonus().click || 1) * (skillMult('click') || 1);
+  return base * mult;
+}
+
+function totalPassive(){
+  // conservative passive calculation combining passiveBase and multipliers
+  const base = (state.passiveBase || 0);
+  const mult = (state.passiveMult || 1) * (getCareerBonus().passive || 1) * (getWorkstyleBonus().passive || 1) * (skillMult('passive') || 1);
+  // agents provide additional passive XP/sec when unlocked
+  const agents = state.agents || { count:0, xpPerAgent:1 };
+  const agentBase = (agents.count || 0) * (agents.xpPerAgent || 1);
+  // apply seniority XP multiplier to agent output as well
+  const agentOutput = agentBase * (state.seniorityXpMult || 1);
+  return (base * mult) + agentOutput;
+}
+
+function skillMult(key){
+  // placeholder: skills system not fully implemented yet; return neutral multiplier
+  return 1;
+}
+
+function getPersonaAttributes(){
+  // return attribute biases for the selected persona if declared, otherwise zeros
+  const p = PERSONAS.find(p=>p.id===state.persona);
+  if(!p || typeof p.attributes !== 'object') return { intelligence:0, focus:0, creativity:0, stamina:0 };
+  return Object.assign({ intelligence:0, focus:0, creativity:0, stamina:0 }, p.attributes);
+}
+
+function promotionBurst(tierId){
+  // lightweight visual hook for promotions — non-blocking
+  try{
+    // simple flash text in saveStatus for immediate feedback
+    saveStatus.textContent = `Promoted — ${tierId}`;
+    setTimeout(()=>{ saveStatus.textContent = 'Autosaves every 10s'; }, 1500);
+  }catch(e){ /* ignore */ }
+}
+
+function renderHeader(){
+  try{
+    if(elCoins) elCoins.textContent = fmt(state.coins);
+    if(elXP) elXP.textContent = fmt(Math.floor(state.xp || 0));
+    if(elPerClick){
+      const baseClick = Math.max(1, totalClickPower());
+      let effective = baseClick;
+      if(state.activeTask && typeof state.activeTask.xpPerClick === 'number'){
+        const extra = Math.max(0, baseClick - 1);
+        effective = state.activeTask.xpPerClick + (extra * 0.5);
+      }
+      elPerClick.textContent = effective.toFixed(2);
+    }
+    if(elPerSec) elPerSec.textContent = totalPassive().toFixed(2);
+    const allMult = (getCareerBonus().click*getWorkstyleBonus().click*skillMult('all')).toFixed(2);
+    if(elMult) elMult.textContent = allMult+'x';
+    if(elPersona) elPersona.textContent = state.persona ? (PERSONAS.find(p=>p.id===state.persona)?.name || state.persona) : '—';
+    if(elWorkstyle) elWorkstyle.textContent = state.workstyle ? (WORKSTYLES.find(w=>w.id===state.workstyle)?.name || state.workstyle) : '—';
+    // set helpful hover descriptions/tooltips
+    try{
+      // persona description
+      if(elPersona && elPersona.parentElement){
+        const p = PERSONAS.find(p=>p.id===state.persona);
+        elPersona.parentElement.title = p ? (p.desc || p.name || state.persona) : 'Choose a persona to see bonuses.';
+      }
+      // workstyle description
+      if(elWorkstyle && elWorkstyle.parentElement){
+        const w = WORKSTYLES.find(w=>w.id===state.workstyle);
+        elWorkstyle.parentElement.title = w ? (w.bonus || w.name || state.workstyle) : 'Choose a workstyle for modifiers.';
+      }
+      // coins/XP/perClick tooltips (use parent .dash-pill if present)
+      if(elCoins && elCoins.parentElement) elCoins.parentElement.title = 'Coins — spend on upgrades and agents.';
+      if(elXP && elXP.parentElement) elXP.parentElement.title = 'XP — spend on skills and career upgrades.';
+      if(elPerClick && elPerClick.parentElement) elPerClick.parentElement.title = 'Click power — XP per click influenced by career, workstyle and upgrades.';
+      // seniority tooltip
+      if(elSeniority && elSeniority.parentElement) elSeniority.parentElement.title = 'Your current seniority level affects salary and XP multipliers.';
+    }catch(e){ /* ignore tooltip errors */ }
+    const a = state.attributes || { intelligence:0, focus:0, creativity:0, stamina:0 };
+    if(elAttributes) elAttributes.textContent = `INT:${a.intelligence} FOC:${a.focus} CRE:${a.creativity} STA:${a.stamina}`;
+    if(elLOC) elLOC.textContent = fmt(state.linesOfCode || 0);
+    if(elSeniority) elSeniority.textContent = state.seniority || 'Junior';
+    // update compact header extras
+    const elAgents = document.getElementById('agentsCount'); if(elAgents) elAgents.textContent = (state.agents && state.agents.count) || 0;
+    const elCurProj = document.getElementById('currentProject'); if(elCurProj) {
+      const proj = (currentProjects()||[]).find(p=>p.id===state.currentProjectId) || null;
+      elCurProj.textContent = proj ? proj.name : (state.currentProjectId || '—');
+    }
+    
+  // update developer profile card
+  try{ if(typeof updateDeveloperProfile === 'function') updateDeveloperProfile(); }catch(e){}
+    // show chosen framework
+    const elFW = document.getElementById('frameworks');
+    if(elFW){
+      if(state.framework){
+        const fw = FRAMEWORKS.find(f=>f.id===state.framework);
+        elFW.textContent = fw ? `${fw.name}` : state.framework;
+      } else {
+        elFW.textContent = '—';
+      }
+    }
+    // update persona avatar art
+    try{
+      const av = document.getElementById('personaAvatar');
+      if(av){
+        // show small pixel-style avatar depending on persona
+        const p = state.persona || '';
+        const map = { egocentric: '😎', altruistic: '🤝', diligent: '💪', lazy: '🛌' };
+        av.textContent = map[p] || (state.seniority === 'Lead' ? '🧑‍💼' : (state.seniority === 'Senior' ? '🧑‍🔧' : (state.seniority === 'Mid' ? '🧑‍💻' : '👩‍💻')));
+      }
+    }catch(e){}
+    // enable/disable Skills tab depending on whether skills are unlocked by a project
+    try{
+      const skillsTab = document.querySelector('#tabs .tabbtn[data-tab="skills"]');
+      if(skillsTab){
+        if(state.allowSkills){ skillsTab.classList.remove('disabled'); skillsTab.disabled = false; }
+        else { skillsTab.classList.add('disabled'); skillsTab.disabled = true; }
+        // show a small 'NEW' badge if skills were just unlocked and not yet viewed
+        if(state.allowSkills && !state.skillsSeen){
+          if(!skillsTab.querySelector('.tab-badge')){
+            const b = document.createElement('span'); b.className='tab-badge'; b.textContent='!';
+            skillsTab.appendChild(b);
+          }
+        } else {
+          const existing = skillsTab.querySelector('.tab-badge'); if(existing) existing.remove();
+        }
+      }
+    }catch(e){/* ignore */}
+  // mishap console is rendered by pushMishapMessage into #mishapConsole
+  }catch(e){ console.warn('renderHeader guard error', e); }
+}
+
+function pushMishapMessage(text){
+  // default to INFO level if not specified
+  let level = 'info';
+  let msg = text;
+  // allow passing an object { level, text }
+  if(typeof text === 'object' && text !== null){ level = text.level || 'info'; msg = text.text || ''; }
+  state.mishapLog = state.mishapLog || [];
+  state.mishapLog.push({ level: level, text: msg, time: Date.now() });
+  // keep last 50
+  if(state.mishapLog.length > 50) state.mishapLog.shift();
+  // render only the last event to the inline mishap console
+  try{
+    const mc = document.getElementById('mishapConsole');
+    if(mc){
+      const last = state.mishapLog.slice(-1)[0];
+      if(last){
+        const ts = new Date(last.time).toLocaleTimeString();
+        mc.classList.remove('info','warn','error');
+        mc.classList.add(last.level || 'info');
+        const tag = last.level === 'error' ? '[ERROR]' : (last.level === 'warn' ? '[WARN]' : '[INFO]');
+        mc.textContent = `${tag} ${ts}: ${last.text}`;
+      }
+    }
+  }catch(e){ /* ignore render errors */ }
+}
+
+// UI refresh control flags (set these when a heavier UI rebuild is required)
+let needsShopRefresh = true; // full shop/skills/buttons
+let needsSkillsRefresh = true;
+let needsUIRefresh = true; // header/counters
+// suppress rendering the full tasks list briefly when we immediately start the next task
+let suppressNextFullTaskRender = false;
+
+// Lightweight UI update: refresh only counters every frame; rebuild shop/skills when flagged
+function updateUI(){
+  try{
+    // header & counters every frame
+    renderHeader();
+    const elAgents = document.getElementById('agentsCount');
+    if(elAgents) elAgents.textContent = (state.agents && state.agents.count) || 0;
+
+    // conditional heavier updates
+    if(needsShopRefresh){ updateShop(); needsShopRefresh = false; }
+    if(needsSkillsRefresh){ renderSkills(); needsSkillsRefresh = false; }
+  }catch(e){ console.error('updateUI error', e); }
+}
+
+// Ensure updateTotals exists: awards passive coins per tick, checks promotions and refreshes UI
+function updateTotals(){
+  try{
+    const gain = totalPassive() || 0; // passive coins per second
+    if(gain > 0){
+      state.coins = (state.coins || 0) + gain;
+      state.totalCoins = (state.totalCoins || 0) + gain;
+      // Promotions may trigger from passive income
+      checkSeniorityPromotions();
+      // Update header/shop affordances
+      updateUI();
+    }
+  }catch(e){ console.error('updateTotals error', e); }
+}
+
+function handleClick(x,y){
+  // Only register clicks if the game has started
+  if(!state.started) return;
+  // Compute base click power once for both LOC and XP calculations
+  const baseClick = Math.max(1, totalClickPower());
+  // Each click writes lines of code (LOC) scaled by click power (flavor stat)
+  // Use a gentle scaling so LOC feels rewarding but not excessive
+  // linesPerClick = 1 + ceil((baseClick - 1) * 0.5) — lets first upgrade show +2 LOC
+  const linesPerClick = 1 + Math.ceil(Math.max(0, baseClick - 1) * 0.5);
+  state.linesOfCode = (state.linesOfCode || 0) + linesPerClick;
+  // Determine XP per click: blend task baseline with click power so Shop upgrades always help
+  let xpPer = baseClick;
+  if(state.activeTask && typeof state.activeTask.xpPerClick === 'number'){
+    const extra = Math.max(0, baseClick - 1); // only the amount above 1 contributes partially
+    xpPer = state.activeTask.xpPerClick + (extra * 0.5);
+  }
+  const attrs = state.attributes || { intelligence:0, focus:0, creativity:0, stamina:0 };
+  const attrMult = 1 + ((attrs.intelligence||0) * 0.02) + ((attrs.focus||0) * 0.01);
+  let xpGain = xpPer * (personaXpMult ? personaXpMult() : 1) * attrMult * (state.seniorityXpMult || 1);
+  // framework-specific XP modifiers (e.g., React Starter boosts feature tasks)
+  if(state.framework && state.activeTask && state.activeTask.type === 'feature'){
+    const fw = FRAMEWORKS.find(f=>f.id === state.framework);
+    if(fw && fw.effects && fw.effects.featureXpMult){ xpGain *= fw.effects.featureXpMult; }
+  }
+    // apply Lead 'vision' bonus if set (only affects framework-influenced tasks)
+    if(state.leadVision && state.seniority === 'Lead'){
+      xpGain *= 1.10;
+    }
+  state.xp = (state.xp || 0) + xpGain;
+  state.totalXp = (state.totalXp || 0) + xpGain;
+
+  // Play click sound
+  playSfx('sfxClick');
+
+  // handle streaks: clicks within 1s increment combo
+  recordClickStreak();
+
+  // Mishap: 10% chance per click for Junior to change task required (+10% or -10%)
+  // existing mishap behavior, plus startup modifiers
+  const mishapBaseChance = 0.10;
+  let mishapChance = mishapBaseChance;
+  if(state.framework){ const fw = FRAMEWORKS.find(f=>f.id===state.framework); if(fw && fw.effects && fw.effects.startupMishapBonus && state.leadPath === 'Startup') mishapChance += fw.effects.startupMishapBonus; }
+  // throttle mishaps: at most once every 4s
+  const now = Date.now();
+  const mishapCooldownMs = 4000;
+  const canMishap = !state.lastMishapAt || (now - state.lastMishapAt) > mishapCooldownMs;
+  if(state.seniority === 'Junior' && state.activeTask && canMishap && Math.random() < mishapChance){
+    const positive = Math.random() < 0.5;
+    // ensure baseRequired/maxRequired exist for proper clamping
+    if(typeof state.activeTask.baseRequired !== 'number') state.activeTask.baseRequired = Math.max(1, Math.ceil(state.activeTask.required));
+    if(typeof state.activeTask.maxRequired !== 'number') state.activeTask.maxRequired = Math.max(state.activeTask.baseRequired, Math.ceil(state.activeTask.baseRequired * 2.0));
+    if(positive){
+      pushMishapMessage({ level:'info', text:'Mentor helped you debug! Task requires −10% lines.' });
+      const nextReq = Math.max(1, Math.ceil(state.activeTask.required * 0.90));
+      state.activeTask.required = Math.max(1, nextReq); // allow going below base
+    } else {
+      pushMishapMessage({ level:'warn', text:'Oops, you pushed to the wrong branch! Task requires +10% more lines.' });
+      const nextReq = Math.max(1, Math.ceil(state.activeTask.required * 1.10));
+      // clamp to maxRequired (200% of base)
+      state.activeTask.required = Math.min(state.activeTask.maxRequired, nextReq);
+    }
+    state.lastMishapAt = now;
+    renderTasks();
+  }
+
+  // Add XP to task progress if active (progress is measured in XP units vs required which is lines)
+  if(state.activeTask){
+    state.activeTask.progress = (state.activeTask.progress || 0) + xpGain;
+    if(state.activeTask.progress >= state.activeTask.required){
+      completeTask();
+    }
+  // update task UI so progress is visible immediately
+  try{ renderTasks(); }catch(e){}
+  }
+  // Show floating 'line of code' animation and XP float
+  showFloatyText(x, y, `+${linesPerClick} LOC`, '#7de37d');
+  showFloatyText(x, y-12, `+${fmt(Math.floor(xpGain))} XP`, '#ffd35a');
+  spawnPixelParticles(x,y);
+  // small bounce on canvas to give tactile feel
+  triggerCanvasBounce();
+  // Update UI (lightweight) — avoid rebuilding shop here
+  updateUI();
+}
+
+/* =========================
+   New: Sound, FX, Streaks, Events
+   ========================= */
+function playSfx(id){
+  try{
+    // Prefer WebAudio synth if available
+    if(window.__clickerAudio && typeof window.__clickerAudio.play === 'function'){
+      window.__clickerAudio.play(id);
+      return;
+    }
+    const a = document.getElementById(id);
+    if(!a) return;
+    a.currentTime = 0; a.volume = 0.9; a.play().catch(()=>{});
+  }catch(e){}
+}
+
+// Initialize a small WebAudio-based SFX system (mechanical typing + simple tones)
+(function initWebAudio(){
+  try{
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if(!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
+
+    function makeClick(time){
+      // choose style: 'mech' (short bright click) or 'thud' (softer, typewriter-like)
+      const style = window.__clickerAudio && window.__clickerAudio.style ? window.__clickerAudio.style : 'mech';
+      if(style === 'thud'){
+        // low thud body
+        const osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.value = 140;
+        const og = ctx.createGain(); og.gain.value = 0.0001;
+        osc.connect(og); og.connect(master);
+        og.gain.setValueAtTime(0.0001, time);
+        og.gain.exponentialRampToValueAtTime(0.06, time + 0.01);
+        og.gain.exponentialRampToValueAtTime(0.0001, time + 0.12);
+        osc.start(time); osc.stop(time + 0.14);
+
+        // short filtered noise attack for click
+        const noise = ctx.createBufferSource();
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.015, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.exp(-i/data.length*8);
+        noise.buffer = buffer;
+        const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1200;
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 7000;
+        const g = ctx.createGain(); g.gain.value = 0.6;
+        noise.connect(hp); hp.connect(lp); lp.connect(g); g.connect(master);
+        noise.start(time);
+        noise.stop(time + 0.04);
+      } else {
+        // native mechanical: bright short noise + tiny square transient
+        const noise = ctx.createBufferSource();
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.02, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.exp(-i/data.length*6);
+        noise.buffer = buffer;
+        const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1000 + Math.random()*2000;
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 8000;
+        const g = ctx.createGain(); g.gain.value = 0.9;
+        noise.connect(hp); hp.connect(lp); lp.connect(g); g.connect(master);
+        noise.start(time);
+        noise.stop(time + 0.06);
+
+        const osc = ctx.createOscillator(); osc.type = 'square'; osc.frequency.value = 1200 + Math.random()*300;
+        const og = ctx.createGain(); og.gain.value = 0.002;
+        osc.connect(og); og.connect(master);
+        osc.start(time); osc.stop(time + 0.03);
+      }
+    }
+
+    function makeBlip(time, freq, dur){
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = freq;
+      const g = ctx.createGain(); g.gain.value = 0.0001;
+      o.connect(g); g.connect(master);
+      g.gain.setValueAtTime(0.0001, time);
+      g.gain.exponentialRampToValueAtTime(0.02, time + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+      o.start(time); o.stop(time + dur + 0.02);
+    }
+
+    // public play dispatcher
+    window.__clickerAudio = {
+      play: function(id){
+        const t = ctx.currentTime + 0.001;
+        if(id === 'sfxClick'){
+          makeClick(t);
+        } else if(id === 'sfxXP'){
+          // small pleasant ascending blip
+          makeBlip(t, 880, 0.12);
+          makeBlip(t+0.06, 1100, 0.10);
+        } else if(id === 'sfxProject'){
+          makeBlip(t, 500, 0.18);
+          makeBlip(t+0.08, 660, 0.14);
+        } else if(id === 'sfxLevel'){
+          // celebratory chord
+          makeBlip(t, 660, 0.22);
+          makeBlip(t+0.05, 880, 0.20);
+          makeBlip(t+0.10, 1100, 0.18);
+        } else {
+          makeClick(t);
+        }
+      }
+    };
+  }catch(e){ /* WebAudio init failed, keep audio tags fallback */ }
+})();
+
+// Floating text generator: canvas coordinates in 0..191 space -> screen coords
+function showFloatyText(cx, cy, text, color='#fff'){
+  try{
+    const canvasRect = canvas.getBoundingClientRect();
+    const sx = canvasRect.left + (cx/192) * canvasRect.width;
+    const sy = canvasRect.top + (cy/192) * canvasRect.height;
+    const el = document.createElement('div');
+    el.className = 'floaty';
+    el.textContent = text;
+    el.style.left = (sx - 20) + 'px';
+    el.style.top = (sy - 20) + 'px';
+    el.style.color = color;
+    el.style.opacity = '1';
+    el.style.transition = 'transform 900ms ease-out, opacity 900ms linear';
+    document.getElementById('fxLayer').appendChild(el);
+    requestAnimationFrame(()=>{
+      el.style.transform = 'translateY(-40px) scale(1.02)';
+      el.style.opacity = '0';
+    });
+    setTimeout(()=> el.remove(), 1000);
+  }catch(e){}
+}
+
+// small pixel explosion around click
+function spawnPixelParticles(cx, cy, count=10){
+  try{
+    const canvasRect = canvas.getBoundingClientRect();
+    const baseX = canvasRect.left + (cx/192) * canvasRect.width;
+    const baseY = canvasRect.top + (cy/192) * canvasRect.height;
+    const layer = document.getElementById('fxLayer');
+    for(let i=0;i<count;i++){
+      const p = document.createElement('div');
+      p.className = 'pixelParticle';
+      p.style.left = (baseX + (Math.random()*24 - 12)) + 'px';
+      p.style.top = (baseY + (Math.random()*24 - 12)) + 'px';
+      p.style.background = ['#ffd35a','#7de37d','#7db7e3','#ff7da1'][Math.floor(Math.random()*4)];
+      layer.appendChild(p);
+      const dx = (Math.random()*140 - 70);
+      const dy = (Math.random()*-120 - 10);
+      p.animate([
+        { transform: 'translate(0,0) scale(1)', opacity:1 },
+        { transform: `translate(${dx}px, ${dy}px) scale(0.6)`, opacity:0 }
+      ], { duration: 700 + Math.random()*400, easing:'cubic-bezier(.2,.8,.2,1)' });
+      setTimeout(()=> p.remove(), 1200);
+    }
+  }catch(e){}
+}
+
+function triggerCanvasBounce(){
+  try{
+    canvas.classList.remove('bounce');
+    // force reflow
+    void canvas.offsetWidth;
+    canvas.classList.add('bounce');
+    setTimeout(()=> canvas.classList.remove('bounce'), 350);
+  }catch(e){}
+}
+
+// Click streak / combo logic
+let _streakCount = 0; let _streakTimer = null;
+function recordClickStreak(){
+  _streakCount++;
+  if(_streakTimer) clearTimeout(_streakTimer);
+  _streakTimer = setTimeout(()=>{ _streakCount = 0; _streakTimer = null; }, 1000);
+  if(_streakCount >= 3){
+    // show combo
+    showFloatyText(96, 48, `Combo x${_streakCount}!`, '#ff7da1');
+    playSfx('sfxXP');
+  }
+}
+
+/* Random narrative events during tasks */
+function maybeTriggerRandomEvent(){
+  // never trigger before the player has started
+  if(!state.started) return;
+  if(!state.activeTask) return;
+  // event chance influenced by workstyle and persona, with cooldown
+  let base = 0.03; // 3% per click when active (lowered)
+  if(state.workstyle === 'startup') base += 0.04;
+  if(state.persona === 'egocentric') base += 0.03;
+  // throttle: at most one event every 8s
+  const now = Date.now();
+  const cooldownMs = 8000;
+  if(state.lastEventAt && (now - state.lastEventAt) < cooldownMs) return;
+  if(Math.random() < base){ state.lastEventAt = now; showEventPopupForRandom(); }
+}
+
+function showEventPopupForRandom(){
+  // create a modal backdrop that blocks all interactions until a choice is made
+  const backdrop = document.createElement('div'); backdrop.className = 'modalBackdrop';
+  const ev = document.createElement('div'); ev.className = 'overlayPanel';
+  const text = 'Bug discovered in tests! Fix now (-20 XP) or risk delay (+50% task time).';
+  ev.innerHTML = `<h3>Event</h3><p class="small">${text}</p><div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;"><button id="evFix" class="btn-yellow">Fix (-20 XP)</button><button id="evDelay" class="btn-yellow secondary">Risk Delay</button></div>`;
+  backdrop.appendChild(ev);
+  document.body.appendChild(backdrop);
+  enterModal();
+  const cleanup = ()=>{ try{ backdrop.remove(); }catch(e){} exitModal(); };
+  document.getElementById('evFix').addEventListener('click', ()=>{
+    state.xp = Math.max(0, (state.xp||0) - 20);
+    pushMishapMessage({ level:'warn', text:'You fixed a bug and lost 20 XP.' });
+    playSfx('sfxXP');
+    cleanup(); renderHeader(); renderTasks();
+  });
+  document.getElementById('evDelay').addEventListener('click', ()=>{
+    if(state.activeTask){
+      // initialize per-task caps
+      if(typeof state.activeTask.baseRequired !== 'number') state.activeTask.baseRequired = Math.max(1, Math.ceil(state.activeTask.required));
+      if(typeof state.activeTask.maxRequired !== 'number') state.activeTask.maxRequired = Math.max(state.activeTask.baseRequired, Math.ceil(state.activeTask.baseRequired * 2.0));
+      state.activeTask.delayEvents = (state.activeTask.delayEvents || 0);
+      if(state.activeTask.delayEvents < 2){
+        const nextReq = Math.ceil(state.activeTask.required * 1.5);
+        state.activeTask.required = Math.min(state.activeTask.maxRequired, nextReq);
+        state.activeTask.delayEvents++;
+        pushMishapMessage({ level:'warn', text:'You risked delay — task length +50%.' });
+      } else {
+        pushMishapMessage({ level:'info', text:'You’ve already delayed enough on this task.' });
+      }
+    }
+    playSfx('sfxProject'); cleanup(); renderTasks();
+  });
+  // persona influence: Team player gets bonus when choosing delay
+  if(state.persona === 'altruistic'){
+    // show small tip
+    showToast('As a Team Player you get bonus XP for collaborative choices.', 'info', 2000);
+  }
+}
+
+// Integrate event checks into click flow: call maybeTriggerRandomEvent at end of handleClick
+// We'll patch by calling it from handleClick via simple addition earlier
+
+/* Seniority theme setter */
+function applySeniorityTheme(){
+  try{
+    document.documentElement.classList.remove('theme-junior','theme-mid','theme-senior','theme-lead');
+    const s = (state.seniority || 'Junior').toLowerCase();
+    if(s.includes('junior')) document.documentElement.classList.add('theme-junior');
+    if(s.includes('mid')) document.documentElement.classList.add('theme-mid');
+    if(s.includes('senior')) document.documentElement.classList.add('theme-senior');
+    if(s.includes('lead')) document.documentElement.classList.add('theme-lead');
+    // update persona avatar art slightly based on seniority
+    const av = document.getElementById('personaAvatar'); if(av) av.textContent = state.seniority === 'Lead' ? '🧑‍💼' : (state.seniority === 'Senior' ? '🧑‍🔧' : (state.seniority === 'Mid' ? '🧑‍💻' : '👩‍💻'));
+  }catch(e){}
+}
+
+// Hook into promotion flow
+const _oldCheckSeniority = checkSeniorityPromotions;
+checkSeniorityPromotions = function(){
+  _oldCheckSeniority();
+  applySeniorityTheme();
+};
+
+// Hook into click completion to maybe fire an event
+const _oldHandleClick = handleClick;
+handleClick = function(x,y){
+  _oldHandleClick(x,y);
+  if(state.started) maybeTriggerRandomEvent();
+};
+
+
+function completeTask(){
+  if(!state.activeTask) return;
+  const taskId = state.activeTask.id;
+  // apply seniority salary multiplier when awarding coins
+  const rewardBase = (state.activeTask.salary || 0);
+  const reward = Math.floor(rewardBase * (state.senioritySalaryMult || 1));
+  state.coins = (state.coins || 0) + reward;
+  state.totalCoins = (state.totalCoins || 0) + reward;
+  // visual + sound feedback for coins
+  try{ showFloatyText(96, 60, `+${fmt(reward)} Coins`, '#ffd35a'); playSfx('sfxProject'); }catch(e){}
+  // small bonus XP on completion
+  const bonusXP = Math.max(5, Math.floor((state.xp || 0) * 0.03));
+  state.xp = (state.xp || 0) + bonusXP;
+  // also count bonusXP toward lifetime XP
+  state.totalXp = (state.totalXp || 0) + bonusXP;
+  // record completion for projects
+  state.completedTasks = state.completedTasks || [];
+  if(!state.completedTasks.includes(taskId)) state.completedTasks.push(taskId);
+  // small chance for an accessory
+  if(Math.random() < 0.12){
+    state.accessories = state.accessories || [];
+    state.accessories.push('Accessory-'+Math.floor(Math.random()*1000));
+    saveStatus.textContent = 'Found an accessory!';
+    setTimeout(()=> saveStatus.textContent='Autosaves every 10s', 2000);
+  }
+  state.activeTask = null;
+  scheduleSave();
+  // check for project completion (may unlock frameworks)
+  checkProjectsCompletion();
+  // also check for seniority promotions after gaining lifetime XP
+  checkSeniorityPromotions();
+  // If we're on a Lead Startup path, small chance of setback after completing task
+  if(state.seniority === 'Lead' && state.leadPath === 'Startup'){
+    if(Math.random() < 0.30){
+      // choose setback: lose XP or mark last task incomplete (repeat)
+      if(Math.random() < 0.5){
+        state.xp = Math.max(0, (state.xp||0) - 50);
+  const txt = 'Startup setback: you lost 50 XP due to a bad merge.';
+  pushMishapMessage({ level:'warn', text: txt });
+  state.mishapLog = state.mishapLog || [];
+  state.mishapLog.push({ type:'startup_xp_loss', text: txt, time: Date.now() });
+      } else {
+        // repeat last task: remove last completed task entry so it needs redoing
+        const last = taskId;
+        const idx = state.completedTasks.indexOf(last);
+        if(idx !== -1) state.completedTasks.splice(idx,1);
+  const txt = 'Startup setback: a regression forces you to redo the last task.';
+  pushMishapMessage({ level:'warn', text: txt });
+  state.mishapLog = state.mishapLog || [];
+  state.mishapLog.push({ type:'startup_repeat', text: txt, task: last, time: Date.now() });
+      }
+    }
+  }
+  renderHeader();
+  renderTasks();
+}
+
+/* =========================
+   Save / Load / Reset
+   ========================= */
+// Immediate save to localStorage
+function saveNow(){
+  try{
+    const now = Date.now();
+    state.lastSave = now;
+    const saveData = { v:3, state: state };
+    localStorage.setItem('clickerSave', JSON.stringify(saveData));
+    if(saveStatus) saveStatus.textContent = 'Game saved!';
+    setTimeout(()=>{ if(saveStatus) saveStatus.textContent='Autosaves every 10s'; }, 2000);
+  }catch(e){ console.error('saveNow error', e); }
+}
+
+// Scheduled/throttled save: ensures we don't spam localStorage (calls saveNow at most once per interval)
+let _saveTimer = null;
+function scheduleSave(){
+  if(_saveTimer) return; // already scheduled
+  _saveTimer = setTimeout(()=>{ _saveTimer = null; saveNow(); }, 10000); // 10s throttle
+}
+
+function load(){
+  try{
+    const raw = localStorage.getItem('clickerSave');
+    if(!raw){
+      saveStatus.textContent = 'No save found';
+      setTimeout(()=> saveStatus.textContent='Autosaves every 10s', 1500);
+      return;
+    }
+    const saveData = JSON.parse(raw);
+    if(!saveData || !saveData.v){
+      saveStatus.textContent = 'No compatible save found';
+      setTimeout(()=> saveStatus.textContent='Autosaves every 10s', 1500);
+      return;
+    }
+
+    // helper: replace current `state` contents while preserving object reference
+    function setStateFromPlain(obj){
+      const merged = Object.assign(getDefaultState(), obj || {});
+      // remove any keys currently on state
+      for(const k of Object.keys(state)) delete state[k];
+      // copy merged keys into state
+      Object.assign(state, merged);
+    }
+
+    // Accept v3 which stores the whole state, or fall back to merging older formats
+    if(saveData.v === 3 && saveData.state){
+      setStateFromPlain(saveData.state);
+    } else if(saveData.v === 2){
+      // old v2 saved individual top-level fields; merge into defaults
+      const merged = Object.assign(getDefaultState(), saveData || {});
+      setStateFromPlain(merged);
+    } else if(saveData.v === 1){
+      // older format: try shallow merge of known fields
+      const merged = Object.assign(getDefaultState(), saveData || {});
+      setStateFromPlain(merged);
+    } else {
+      saveStatus.textContent = 'No compatible save found';
+      setTimeout(()=> saveStatus.textContent='Autosaves every 10s', 1500);
+      return;
+    }
+
+    // ensure minimal defaults for fields that may be missing
+    state.lastSave = Date.now();
+    state.seniorityGranted = state.seniorityGranted || {};
+    state.allowWorkstyleChange = false;
+    state.agents = state.agents || { count:0, level:0 };
+    state.completedTasks = state.completedTasks || [];
+    state.completedProjects = state.completedProjects || [];
+    state.frameworks = state.frameworks || [];
+    state.totalXp = state.totalXp || 0;
+    state.seniorityXpMult = state.seniorityXpMult || 1;
+    state.senioritySalaryMult = state.senioritySalaryMult || 1;
+    updateTotals();
+    renderHeader();
+    updateShop();
+    // ensure overlay / interactivity reflect the loaded state
+    try{
+      if(!state.started){ overlay.style.display = 'flex'; } else { overlay.style.display = 'none'; }
+      updateGameInteractivity();
+    }catch(e){}
+    saveStatus.textContent = 'Game loaded!';
+    setTimeout(()=> saveStatus.textContent='Autosaves every 10s', 1500);
+  }catch(e){
+    console.error('Failed to load save:', e);
+    saveStatus.textContent = 'Failed to load save (see console)';
+    setTimeout(()=> saveStatus.textContent='Autosaves every 10s', 2000);
+  }
+}
+
+function reset(){
+  if(!confirm('Reset game? This cannot be undone.')) return;
+  // Reset to the default state while preserving the `state` object reference
+  const defaults = getDefaultState();
+  for(const k of Object.keys(state)) delete state[k];
+  Object.assign(state, defaults);
+  state.lastSave = Date.now();
+  if(saveStatus) saveStatus.textContent = 'Game reset!';
+  // force the start overlay so player must re-choose persona & workstyle
+  renderStartOverlayChoices();
+  overlay.style.display = 'flex';
+  state.started = false;
+  // disable gameplay interactions until start
+  try{ updateGameInteractivity(); }catch(e){}
+  updateTotals();
+  renderHeader();
+  updateShop();
+}
+
+/* =========================
+   UI Helpers
+   ========================= */
+function updateStats(){
+  // basic stats update, can be expanded for more complex displays
+  const clickPower = totalClickPower();
+  const passivePower = totalPassive();
+  const elClick = document.getElementById('clickPower');
+  if(elClick) elClick.textContent = fmt(clickPower);
+  const elPassive = document.getElementById('passivePower');
+  if(elPassive) elPassive.textContent = fmt(passivePower);
+}
+
+function updateShop(targetEl){
+  const shopList = targetEl || document.getElementById('shopList');
+  if(!shopList) return;
+  // clear existing items
+  shopList.innerHTML = '';
+  // Shop controls: filters
+  const filter = state.shopFilter || 'all';
+  const controls = document.createElement('div');
+  controls.className = 'shopControls';
+  controls.innerHTML = `
+    <div class="shopHeader" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="flex:1"><h3 style="margin:0">Shop</h3></div>
+      <div class="shopFilters" style="display:flex;gap:8px;align-items:center;">
+        <button class="filterBtn" data-filter="all">All</button>
+        <button class="filterBtn" data-filter="owned">Owned</button>
+        <button class="filterBtn" data-filter="affordable">Affordable</button>
+      </div>
+    </div>
+  `;
+  shopList.appendChild(controls);
+  // wire filter buttons
+  controls.querySelectorAll('.filterBtn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.filter === (state.shopFilter || 'all'));
+    b.addEventListener('click', ()=>{
+      state.shopFilter = b.dataset.filter;
+      updateShop(shopList);
+      // also keep default panel in sync if this isn't it
+      const defList = document.getElementById('shopList');
+      if(defList && defList !== shopList) updateShop(defList);
+    });
+  });
+
+  // helper to decide whether to render an item under current filter
+  const passesFilter = (kind, item, extra) => {
+    if((state.shopFilter || 'all') === 'all') return true;
+    const f = state.shopFilter;
+    if(f === 'owned'){
+      if(kind === 'equipment') return !!(state.upgrades && state.upgrades[item.id]);
+      if(kind === 'utilities') return ((state.agents && state.agents.count) || 0) > 0;
+      if(kind === 'accessories') return (state.accessories && state.accessories.length) > 0;
+    }
+    if(f === 'affordable'){
+      if(kind === 'equipment') return (state.coins || 0) >= (item.cost || 0);
+      if(kind === 'utilities'){
+        const owned = (state.agents && state.agents.count) || 0;
+        const cost = agentCost(extra && extra.tier || 0, owned);
+        return (state.coins || 0) >= cost;
+      }
+      if(kind === 'accessories') return true; // accessories are typically unlocked, not bought
+    }
+    return false;
+  };
+
+  // Group: Equipment (UPGRADES)
+  let equipmentShown = false;
+  const eqHeader = document.createElement('div');
+  eqHeader.className = 'shopGroupHeader';
+  eqHeader.innerHTML = '<h3>Equipment</h3><p class="small">Core upgrades and gear purchasable with Coins.</p>';
+  for(const upgrade of UPGRADES){
+    if(!passesFilter('equipment', upgrade)) continue;
+    if(!equipmentShown){ shopList.appendChild(eqHeader); equipmentShown = true; }
+    const level = state.upgrades[upgrade.id] || 0;
+    const affordable = (state.coins || 0) >= (upgrade.cost || 0);
+    const el = document.createElement('div');
+    el.className = 'row shopItem';
+    el.innerHTML = `
+      <div style="flex:1">
+        <h4>${upgrade.name} ${level>0?`(Owned x${level})`:''}</h4>
+        <p class="small">${upgrade.desc}</p>
+        <p class="small">Effect: ${upgrade.name} — cost: ${fmt(upgrade.cost)} coins</p>
+      </div>
+      <button class="buyBtn" data-id="${upgrade.id}" ${affordable ? '' : 'disabled'} aria-label="Buy ${upgrade.name} for ${fmt(upgrade.cost)} coins">${level>0? 'Buy again' : 'Buy'} (${fmt(upgrade.cost)}c)</button>
+    `;
+    shopList.appendChild(el);
+  }
+
+  // Group: Utilities (AGENTS)
+  let utilitiesShown = false;
+  const utilHeader = document.createElement('div');
+  utilHeader.className = 'shopGroupHeader';
+  utilHeader.innerHTML = '<h3>Utilities</h3><p class="small">Agents and automation that produce passive XP/lines.</p>';
+  const ownedAgents = (state.agents && state.agents.count) || 0;
+  const agentCap = getAgentCap();
+  // If filter is 'owned' and player has agents, show a concise owned summary
+  if((state.shopFilter || 'all') === 'owned'){
+    if(ownedAgents > 0){ shopList.appendChild(utilHeader); utilitiesShown = true;
+      const el = document.createElement('div');
+      el.className = 'row shopItem';
+      el.innerHTML = `<div style="flex:1"><h4>Owned Agents</h4><p class="small">You own ${ownedAgents} agents (Cap: ${agentCap}).</p></div>`;
+      shopList.appendChild(el);
+    }
+  } else {
+    for(let i=0;i<AGENTS.length;i++){
+      const agent = AGENTS[i];
+      const cost = agentCost(i, ownedAgents);
+      const affordable = (state.coins || 0) >= cost;
+      const atCap = ownedAgents >= agentCap;
+      if(!passesFilter('utilities', agent, {tier:i})) continue;
+      if(!utilitiesShown){ shopList.appendChild(utilHeader); utilitiesShown = true; }
+      const el = document.createElement('div');
+        el.className = 'row shopItem';
+        el.innerHTML = `
+          <div style="flex:1">
+            <h4>${agent.name}</h4>
+            <p class="small">Generates ${agent.basePower} LOC/sec baseline. (Tier ${i+1})</p>
+            <p class="small">Owned: ${ownedAgents} / Cap: ${agentCap} — Each agent adds +${(state.agents&&state.agents.xpPerAgent)||1} XP/sec</p>
+          </div>
+          <button class="buyBtn" data-id="${agent.id}" data-tier="${i}" ${(!affordable || atCap) ? 'disabled' : ''} aria-label="Buy ${agent.name} agent for ${fmt(cost)} coins">Buy (${fmt(cost)}c)</button>
+        `;
+      shopList.appendChild(el);
+    }
+  }
+
+  // Group: Accessories (if any)
+  if(state.rareAccessoriesUnlocked || (state.accessories && state.accessories.length)){
+    if(passesFilter('accessories')){
+      const accHeader = document.createElement('div');
+      accHeader.className = 'shopGroupHeader';
+      accHeader.innerHTML = '<h3>Accessories</h3><p class="small">Special items and equipment you own or can unlock.</p>';
+      shopList.appendChild(accHeader);
+      const accEl = document.createElement('div');
+      accEl.className = 'row shopItem';
+      accEl.innerHTML = `<div style="flex:1"><p class="small">${(state.accessories||[]).join(', ') || 'None'}</p></div>`;
+      shopList.appendChild(accEl);
+    }
+  }
+
+  // handle purchases via coins (upgrades and agents use same button class)
+  shopList.onclick = (e)=>{
+    const btn = e.target.closest && e.target.closest('.buyBtn');
+    if(!btn) return;
+    const id = btn.dataset.id;
+
+    // first try to find a normal upgrade
+    const upgrade = UPGRADES.find(u=>u.id===id);
+    if(upgrade){
+      if((state.coins||0) < (upgrade.cost||0)){
+        saveStatus.textContent = 'Not enough coins to buy that.';
+        setTimeout(()=> saveStatus.textContent='Autosaves every 10s', 1500);
+        return;
+      }
+      // deduct coins and apply upgrade
+      state.coins -= upgrade.cost;
+  state.upgrades = state.upgrades || {};
+      state.upgrades[upgrade.id] = (state.upgrades[upgrade.id] || 0) + 1;
+      // simple effects per upgrade type
+      switch(upgrade.id){
+        case 'clickPower': state.clickBonus = (state.clickBonus || 0) + 1; break;
+        case 'passiveIncome': state.passiveBase = (state.passiveBase || 0) + 1; break;
+        case 'proKeyboard':
+          // small bonus: increase xp gain slightly
+          state.clickBonus = (state.clickBonus || 0) + 0.5;
+          break;
+      }
+  // mark UI for refresh and persist (autosave throttled)
+  needsShopRefresh = true;
+  needsSkillsRefresh = true;
+  needsUIRefresh = true;
+  scheduleSave();
+  // refresh current view and default list if different
+  try{ updateShop(shopList); const def = document.getElementById('shopList'); if(def && def !== shopList) updateShop(def); }catch(e){}
+      return;
+    }
+
+    // otherwise check if it's an agent purchase (AGENTS list)
+    const agentTier = parseInt(btn.dataset.tier, 10);
+    const agentDef = AGENTS[agentTier];
+    if(agentDef && id === agentDef.id){
+      const owned = (state.agents && state.agents.count) || 0;
+      const cost = agentCost(agentTier, owned);
+      if((state.coins||0) < cost){
+        saveStatus.textContent = 'Not enough coins to buy that agent.';
+        setTimeout(()=> saveStatus.textContent='Autosaves every 10s', 1500);
+        return;
+      }
+      // buy agent: increment count
+      state.coins -= cost;
+  state.agents = state.agents || { count:0, level:0 };
+      state.agents.count = (state.agents.count || 0) + 1;
+      // small scaling: each purchase increases level slowly
+      state.agents.level = Math.floor(state.agents.count / 5);
+  needsShopRefresh = true;
+  needsUIRefresh = true;
+  scheduleSave();
+  // refresh current view and default list if different
+  try{ updateShop(shopList); const def = document.getElementById('shopList'); if(def && def !== shopList) updateShop(def); }catch(e){}
+      return;
+    }
+  };
+
+  // keep current tabs as-is; do not auto-open panels when shop updates
+}
+
+// Agent definitions: cost scales and each agent produces LOC/sec and XP/sec
+const AGENTS = [
+  { id: 'scriptBot', name: 'Script Bot', baseCost: 500, basePower: 0.2 },
+  { id: 'ciAgent', name: 'CI Agent', baseCost: 2500, basePower: 1 },
+  { id: 'mlAssistant', name: 'ML Assistant', baseCost: 10000, basePower: 5 },
+];
+
+// helper to compute agent cost by tier/level
+function agentCost(tier, owned){
+  const a = AGENTS[tier];
+  if(!a) return 999999999;
+  // exponential scaling for repeats
+  return Math.ceil(a.baseCost * Math.pow(1.65, owned));
+}
+
+/* =========================
+   Persona & Workstyle Data
+   ========================= */
+const PERSONAS = [
+  { id:'egocentric', name:'Egocentric', desc:'Loves to be the center of attention.', mods:{ coinMult:1.25, xpMult:1.10 } },
+  { id:'altruistic', name:'Altruistic', desc:'Gains satisfaction from helping others.', mods:{ coinMult:0.90, xpMult:1.25 } },
+  { id:'diligent',   name:'Diligent',   desc:'Puts in extra effort to achieve goals.', mods:{ coinMult:1.15, xpMult:1.15 } },
+  { id:'lazy',       name:'Lazy',       desc:'Prefers to let others do the work.', mods:{ coinMult:0.75, xpMult:0.90 } },
+];
+
+// Skills are XP-only and task-specific. Each skill defines an `apply` key describing its effect.
+const SKILLS = [
+  { id:'refactorer', name:"Refactorer", type:'coding', desc:'-10% line requirement for Coding tasks.', costXP:150, apply: { taskType:'coding', requiredMult:0.90 } },
+  { id:'asyncGuru', name:'Async Guru', type:'general', desc:'+1 parallel task slot (applies when purchased).', costXP:300, apply: { extraParallel:1 } },
+  { id:'designersEye', name:"Designer's Eye", type:'design', desc:'+20% coin payout for Design tasks.', costXP:180, apply: { taskType:'design', salaryMult:1.20 } },
+  { id:'debugging', name:'Debugger', type:'coding', desc:'Reduce chance of incident and mitigate penalties.', costXP:200, apply: { taskType:'coding', incidentResist:0.5 } },
+];
+
+// Render the Skills panel (XP purchases). Rebuild only when flagged.
+function renderSkills(){
+  const panel = document.getElementById('panel-skills');
+  const list = document.getElementById('skillList');
+  if(!panel || !list) return;
+  list.innerHTML = '';
+  state.skills = state.skills || {};
+  for(const skill of SKILLS){
+    const owned = state.skills[skill.id] ? true : false;
+    const locked = skill.requirement && !skill.requirement(state);
+    const el = document.createElement('div');
+    el.className = 'row';
+    el.innerHTML = `
+      <div style="flex:1">
+        <h4>${skill.name} ${owned?'<small>(Owned)</small>':''}</h4>
+        <p class="small">${skill.desc}</p>
+      </div>
+      <button class="skillBtn" data-id="${skill.id}" ${owned||locked? 'disabled':''} aria-label="Buy skill ${skill.name} for ${fmt(skill.costXP)} XP">Buy (${fmt(skill.costXP)} XP)</button>
+    `;
+    list.appendChild(el);
+  }
+
+  // handle skill purchases
+  list.onclick = (e)=>{
+    const btn = e.target.closest && e.target.closest('.skillBtn');
+    if(!btn) return;
+    const id = btn.dataset.id;
+    const skill = SKILLS.find(s=>s.id===id);
+    if(!skill) return;
+    if((state.xp||0) < (skill.costXP||0)){
+      saveStatus.textContent = 'Not enough XP to buy that skill.';
+      setTimeout(()=> saveStatus.textContent='Autosaves every 10s', 1500);
+      return;
+    }
+    // Deduct XP and grant skill
+    state.xp -= skill.costXP;
+    state.skills = state.skills || {};
+    state.skills[skill.id] = true;
+    // apply immediate effects where necessary (e.g., extraParallel)
+    if(skill.apply && skill.apply.extraParallel){
+      state.maxParallel = (state.maxParallel || 1) + skill.apply.extraParallel;
+    }
+    // If this skill affects the currently active task, re-compute its required/properties
+    try{
+      if(state.activeTask){
+        const activeDef = currentTasks().find(x=>x.id===state.activeTask.id) || {};
+        // recompute required and salary in-place to reflect new skill
+        state.activeTask.required = computeEffectiveRequired(activeDef);
+        state.activeTask.salary = computeEffectiveSalary(activeDef);
+        // ensure progress doesn't exceed new required
+        if(state.activeTask.progress >= state.activeTask.required){
+          // complete immediately if we've already met the new requirement
+          completeTask();
+        }
+      }
+    }catch(e){ /* ignore */ }
+  // mark UI for refresh and immediately update so player sees effect
+  needsSkillsRefresh = true;
+  needsUIRefresh = true;
+  scheduleSave();
+  try{
+    // immediate UI updates so the buy has visible effect
+    renderSkills();
+    renderHeader();
+    renderTasks();
+    updateShop();
+  }catch(e){ /* ignore */ }
+  };
+}
+
+const UPGRADES = [
+  { id:'clickPower', name:'Click Power', desc:'Increase base click power (buy with Coins).', cost:100, type:'equipment' },
+  { id:'passiveIncome', name:'Passive Income', desc:'Increase base passive coin gain (buy with Coins).', cost:150, type:'equipment' },
+  { id:'proKeyboard', name:'Pro Keyboard', desc:'Small persistent productivity tool (buy with Coins).', cost:200, type:'equipment' },
+];
+
+function getPersonaMods(){
+  const p = PERSONAS.find(p=>p.id===state.persona);
+  return p ? p.mods : {};
+}
+
+function getWorkstyleBonus(){
+  const w = WORKSTYLES.find(w=>w.id===state.workstyle);
+  return w ? w.mods : { click:1, passive:1 };
+}
+
+/* =========================
+   Seniority-based Tasks & Projects
+   ========================= */
+// Define tasks/projects per seniority level. Start with Junior only.
+const seniorityLevels = {
+  'Junior': {
+    tasks: [
+  { id:'setupEnv', name:'Set Up Dev Environment', required:120, salary:18, rewardXP:220, xpPerClick:3, desc:'Installing dependencies… waiting for npm install to finish.' },
+  { id:'fixLinter', name:'Fix Linter Errors', required:110, salary:25, rewardXP:240, xpPerClick:3, desc:'Your IDE screams red underlines everywhere.' },
+  { id:'pushCommit', name:'Push First Commit', required:90, salary:20, rewardXP:180, xpPerClick:3, desc:"git commit -m 'first day at work'." },
+  { id:'helloModule', name:'Write Hello World Module', required:140, salary:35, rewardXP:300, xpPerClick:3, desc:'The classic ritual.' },
+  { id:'renameVars', name:'Rename Variables for Clarity', required:120, salary:28, rewardXP:260, xpPerClick:3, desc:'goodName123 → betterName456.' },
+  { id:'writeTests', name:'Write Unit Tests', required:160, salary:45, rewardXP:360, xpPerClick:3, desc:'Cover your edge cases before QA yells at you.' }
+    ],
+    projects: [
+      { id:'onboarding', name:'Onboarding Project', tasks:['setupEnv','fixLinter','pushCommit'], reward: { type:'unlockSkills' } },
+      { id:'firstFeature', name:'First Feature', tasks:['helloModule','renameVars','writeTests'], reward: { type:'xpMult', value: 1.05 } }
+    ]
+  }
+  ,
+  'Mid': {
+    tasks: [
+  { id:'implLogin', name:'Implement Login System', required:220, salary:60, rewardXP:480, xpPerClick:3, type:'feature', desc:'Secure auth flow, sessions, and validation.' },
+  { id:'addDB', name:'Add Database Connection', required:240, salary:70, rewardXP:520, xpPerClick:3, type:'feature', desc:'Configure DB pool and migrations.' },
+  { id:'writeUnitTests', name:'Write Unit Tests', required:200, salary:50, rewardXP:420, xpPerClick:3, type:'feature', desc:'Add test coverage for the new feature.' },
+  { id:'removeDead', name:'Remove Dead Code', required:210, salary:55, rewardXP:440, xpPerClick:3, type:'refactor', desc:'Prune unused modules and dead branches.' },
+  { id:'splitMonolith', name:'Split Monolith', required:280, salary:85, rewardXP:560, xpPerClick:3, type:'refactor', desc:'Break apart the monolith into services.' },
+  { id:'addCi', name:'Add CI Pipeline', required:230, salary:65, rewardXP:500, xpPerClick:3, type:'refactor', desc:'Automate builds and tests with CI.' }
+    ],
+    projects: [
+      { id:'featureSprint', name:'Feature Sprint', tasks:['implLogin','addDB','writeUnitTests'], reward:{ type:'equipmentSlot', value:1 } },
+      { id:'refactorLegacy', name:'Refactor Legacy', tasks:['removeDead','splitMonolith','addCi'], reward:{ type:'rareAccessories' } }
+    ]
+  }
+  ,
+  'Senior': {
+    tasks: [
+  { id:'codeReview', name:'Code Review', required:260, salary:80, rewardXP:600, xpPerClick:3, desc:'Review PRs and leave constructive comments.' },
+  { id:'pairProg', name:'Pair Programming', required:240, salary:80, rewardXP:550, xpPerClick:3, desc:'Work together to ship features faster.' },
+  { id:'integrationTest', name:'Integration Testing', required:300, salary:95, rewardXP:700, xpPerClick:3, desc:'End-to-end tests for the team feature.' },
+  { id:'optQueries', name:'Optimize DB Queries', required:340, salary:110, rewardXP:780, xpPerClick:3, desc:'Speed up slow queries.' },
+  { id:'addCache', name:'Add Caching Layer', required:280, salary:90, rewardXP:650, xpPerClick:3, desc:'Introduce a cache to reduce load.' },
+  { id:'prodOutage', name:'Handle Production Outage', required:380, salary:130, rewardXP:850, xpPerClick:3, desc:'Manage the incident and restore service.' }
+    ],
+    projects: [
+      { id:'teamFeature', name:'Team Feature Delivery', tasks:['codeReview','pairProg','integrationTest'], reward:{ type:'agent', value:1 } },
+      { id:'scalingChallenge', name:'Scaling Challenge', tasks:['optQueries','addCache','prodOutage'], reward:{ type:'agent', value:1 } }
+    ]
+  }
+};
+
+// Lead-level branching projects (added after Senior promotions)
+const LEAD_BRANCHES = {
+  'Corporate': {
+    idPrefix: 'leadCorp',
+    projects: [
+      { id:'leadCorp7', name:'Corporate Architecture Overhaul', tasks:['designDiagrams','approvePRs','coordinateDeploy'], reward:{ type:'unlockLeadership' } },
+      { id:'leadCorp8', name:'Corporate Compliance Push', tasks:['securityAudit','gdprFixes','boardReview'], reward:{ type:'unlockCorporateFramework' } }
+    ],
+    tasks: [
+  { id:'designDiagrams', name:'Design Diagrams', required:420, salary:180, rewardXP:1100, xpPerClick:3, desc:'Produce high-level architecture diagrams.' },
+  { id:'approvePRs', name:'Approve Pull Requests', required:380, salary:165, rewardXP:980, xpPerClick:3, desc:'Sign off on team PRs.' },
+  { id:'coordinateDeploy', name:'Coordinate Deploy', required:400, salary:190, rewardXP:1050, xpPerClick:3, desc:'Manage release window and deploy.' },
+  { id:'securityAudit', name:'Security Audit', required:460, salary:210, rewardXP:1200, xpPerClick:3, desc:'Run security checks and patch findings.' },
+  { id:'gdprFixes', name:'GDPR Compliance Fixes', required:420, salary:175, rewardXP:1050, xpPerClick:3, desc:'Ensure data practices meet regulations.' },
+  { id:'boardReview', name:'Board Review', required:500, salary:240, rewardXP:1350, xpPerClick:3, desc:'Present results to the board.' }
+    ]
+  },
+  'Startup': {
+    idPrefix: 'leadStart',
+    projects: [
+      { id:'leadStart7', name:'Startup MVP Delivery', tasks:['hackPrototype','fixEmergency','pitchDemo'], reward:{ type:'agent_and_accessory', value:1 } },
+      { id:'leadStart8', name:'Startup Growth Hack', tasks:['viralFeature','handleScaling','investorDemo'], reward:{ type:'unlockStartupStack' } }
+    ],
+    tasks: [
+  { id:'hackPrototype', name:'Hack Prototype', required:360, salary:150, rewardXP:900, xpPerClick:3, desc:'Throw together an MVP under tight deadlines.' },
+  { id:'fixEmergency', name:'Fix Emergency Bugs', required:420, salary:140, rewardXP:1000, xpPerClick:3, desc:'Patch production issues quickly.' },
+  { id:'pitchDemo', name:'Pitch Demo', required:380, salary:220, rewardXP:1100, xpPerClick:3, desc:'Impress investors with your demo.' },
+  { id:'viralFeature', name:'Build Viral Feature', required:380, salary:160, rewardXP:980, xpPerClick:3, desc:'Add a shareable feature.' },
+  { id:'handleScaling', name:'Handle Scaling Crisis', required:460, salary:200, rewardXP:1200, xpPerClick:3, desc:'Keep the site alive under load.' },
+  { id:'investorDemo', name:'Investor Demo Day', required:420, salary:280, rewardXP:1300, xpPerClick:3, desc:'Secure funding and attention.' }
+    ]
+  }
+};
+
+// Helper to get current seniority tasks/projects
+function currentTasks(){
+  // If we're Lead and a path has been chosen, return the branch tasks
+  if(state.seniority === 'Lead'){
+    const path = state.leadPath || state.leadChoices && state.leadChoices['leadPath'];
+    if(path && LEAD_BRANCHES[path]) return LEAD_BRANCHES[path].tasks || [];
+    return seniorityLevels['Lead'] ? (seniorityLevels['Lead'].tasks || []) : [];
+  }
+  const lvl = seniorityLevels[state.seniority] || { tasks:[], projects:[] };
+  return lvl.tasks || [];
+}
+function currentProjects(){
+  if(state.seniority === 'Lead'){
+    const path = state.leadPath || state.leadChoices && state.leadChoices['leadPath'];
+    if(path && LEAD_BRANCHES[path]) return LEAD_BRANCHES[path].projects || [];
+    return seniorityLevels['Lead'] ? (seniorityLevels['Lead'].projects || []) : [];
+  }
+  const lvl = seniorityLevels[state.seniority] || { tasks:[], projects:[] };
+  return lvl.projects || [];
+
+}
+
+// Framework definitions with tradeoffs
+const FRAMEWORKS = [
+  { id:'agileKit', name:'Agile Kit', desc:'Reduces task length by 10% (fewer clicks).', effects:{ requiredMult:0.90 } },
+  { id:'reactStarter', name:'React Starter', desc:'+15% XP from Feature-type tasks.', effects:{ featureXpMult:1.15 } },
+  { id:'ciCd', name:'CI/CD Pipeline', desc:'+20% coins from project completions and increases agent cap by 1.', effects:{ projectCoinMult:1.20, agentCapBonus:1 } }
+  ,{ id:'corporateFramework', name:'Corporate Framework', desc:'+10% XP efficiency for corporate projects.', effects:{ requiredMult:0.90, corporateXpMult:1.10 } }
+  ,{ id:'startupStack', name:'Startup Stack', desc:'+20% coin gain, but increases chance of mishaps.', effects:{ projectCoinMult:1.20, startupMishapBonus:0.10 } }
+];
+
+function getAgentCap(){
+  const base = (state.agents && state.agents.cap) || 3;
+  let bonus = 0;
+  if(state.framework){
+    const fw = FRAMEWORKS.find(f=>f.id===state.framework);
+    if(fw && fw.effects && fw.effects.agentCapBonus) bonus += fw.effects.agentCapBonus;
+  }
+  // accessories could also increase cap in the future; placeholder
+  return base + bonus;
+}
+
+function triggerRecruitAnimation(){
+  try{
+    const root = document.getElementById('characterSummary');
+    if(!root) return;
+    const anim = document.createElement('div');
+    anim.className = 'agentAvatar recruitAnim';
+    anim.style.position = 'relative';
+    anim.style.zIndex = 50;
+    root.prepend(anim);
+    setTimeout(()=> anim.classList.remove('recruitAnim'), 700);
+    setTimeout(()=> anim.remove(), 1200);
+  }catch(e){/* ignore */}
+}
+
+// project completion now computed from currentProjects()
+function checkProjectsCompletion(){
+  const projects = currentProjects();
+  for(const proj of projects){
+    if(state.completedProjects.includes(proj.id)) continue;
+    const done = proj.tasks.filter(tid => state.completedTasks.includes(tid)).length;
+    if(done >= proj.tasks.length){
+      // apply rewards
+      if(proj.reward){
+  if(proj.reward.type === 'unlockSkills'){
+          needsSkillsRefresh = true; // unlock makes skills panel available
+          saveStatus.textContent = 'Project complete! Skills unlocked.';
+          state.allowSkills = true;
+          // small popup to notify player
+          showToast('Skills unlocked! You can now spend XP on skills.', 'info');
+          // floating reward
+          showFloatyText(96, 40, 'Project Done! +XP', '#7de37d');
+          playSfx('sfxProject');
+  } else if(proj.reward.type === 'xpMult'){
+          state.seniorityXpMult = (state.seniorityXpMult || 1) * (proj.reward.value || 1);
+          saveStatus.textContent = `Project complete! XP multiplier increased.`;
+  } else if(proj.reward.type === 'equipmentSlot'){
+          state.equipmentSlots = (state.equipmentSlots || 0) + (proj.reward.value || 1);
+          saveStatus.textContent = `Project complete! Equipment slot +${proj.reward.value || 1}.`;
+        } else if(proj.reward.type === 'rareAccessories'){
+          state.rareAccessoriesUnlocked = true;
+          state.accessories = state.accessories || [];
+          // award two starter accessories if not already present
+          if(!state.accessories.includes('Standing Desk')) state.accessories.push('Standing Desk');
+          if(!state.accessories.includes('Extra Monitor')) state.accessories.push('Extra Monitor');
+          saveStatus.textContent = 'Project complete! Rare accessories unlocked.';
+        } else if(proj.reward.type === 'agent'){
+          // grant an AI agent (passive XP/sec) up to the dynamic cap
+          state.agents = state.agents || { count:0, level:0, xpPerAgent:1, cap:3 };
+          const cap = getAgentCap();
+          if((state.agents.count || 0) < cap){
+            state.agents.count = (state.agents.count || 0) + (proj.reward.value || 1);
+            if(state.agents.count > cap) state.agents.count = cap;
+            showToast(`🎉 You gained a new AI agent! They now generate +${state.agents.xpPerAgent || 1} XP/sec each.`, 'info');
+            saveStatus.textContent = `Project complete! Agents: ${state.agents.count}`;
+            // small recruit animation
+            triggerRecruitAnimation();
+          } else {
+            saveStatus.textContent = 'Project complete! Agent reward but cap reached.';
+          }
+        } else if(proj.reward.type === 'agent_and_accessory'){
+          // grant agent + rare accessory
+          state.agents = state.agents || { count:0, level:0, xpPerAgent:1, cap:3 };
+          const cap = getAgentCap();
+          if((state.agents.count || 0) < cap){
+            state.agents.count = (state.agents.count || 0) + (proj.reward.value || 1);
+            if(state.agents.count > cap) state.agents.count = cap;
+            showToast(`🎉 You gained a new AI agent from the risky project!`, 'info');
+            triggerRecruitAnimation();
+          }
+          state.accessories = state.accessories || [];
+          if(!state.accessories.includes('VC-backed Coffee Machine')) state.accessories.push('VC-backed Coffee Machine');
+          saveStatus.textContent = 'Project complete! Agent and accessory awarded.';
+        } else if(proj.reward.type === 'unlockLeadership'){
+          state.leadSkillsUnlocked = true; state.allowLeadership = true; renderLeadSkillList(); showToast('Leadership Skill Tree unlocked!', 'info');
+        } else if(proj.reward.type === 'unlockCorporateFramework'){
+          // auto-unlock corporate framework as a selectable framework
+          if(!state.frameworks.includes('corporateFramework')) state.frameworks.push('corporateFramework');
+          showToast('Corporate Framework unlocked!', 'info');
+        } else if(proj.reward.type === 'unlockStartupStack'){
+          if(!state.frameworks.includes('startupStack')) state.frameworks.push('startupStack');
+          showToast('Startup Stack unlocked!', 'info');
+        }
+        // framework project coin bonus
+        if(state.framework){
+          const fw = FRAMEWORKS.find(f=>f.id === state.framework);
+          if(fw && fw.effects && fw.effects.projectCoinMult){
+            // sum base salaries of project tasks
+            const sumBase = (proj.tasks || []).map(tid => {
+              const td = currentTasks().find(x=>x.id===tid) || [];
+              return (td.salary || 0);
+            }).reduce((a,b)=>a+b, 0);
+            const bonus = Math.floor(sumBase * (fw.effects.projectCoinMult - 1));
+            if(bonus > 0){ state.coins = (state.coins||0) + bonus; state.totalCoins = (state.totalCoins||0) + bonus; }
+          }
+        }
+      }
+      state.completedProjects.push(proj.id);
+      scheduleSave();
+      renderHeader();
+      renderTasks();
+      // after finishing a project, clear currentProjectId so next project can be started
+      if(state.currentProjectId === proj.id) state.currentProjectId = null;
+      // try to start the next project automatically (if any)
+      tryStartNextProject();
+      // If all projects for this seniority are complete, promote
+      const allProjects = currentProjects().map(p=>p.id);
+      const doneAll = allProjects.every(pid => state.completedProjects.includes(pid));
+  if(doneAll && state.seniority === 'Junior'){
+        // promote to Mid and give visible feedback
+        state.seniority = 'Mid';
+        // apply +10% XP baseline
+        state.seniorityXpMult = (state.seniorityXpMult || 1) * 1.10;
+        state.seniorityGranted['Mid'] = true;
+  // defer the visual celebration and show it inside the framework selection overlay
+  state.pendingPromotion = 'Mid';
+  saveStatus.textContent = 'Promoted to Mid-Level! Choose a framework to continue.';
+  scheduleSave();
+  renderHeader();
+  // pause flow and show framework selection overlay so player must pick before continuing
+  showFrameworkOverlay();
+        return; // stop auto-starting projects until framework chosen
+      }
+      // If all Mid projects complete, promote to Senior
+      if(doneAll && state.seniority === 'Mid'){
+        state.seniority = 'Senior';
+        // apply +20% XP baseline
+        state.seniorityXpMult = (state.seniorityXpMult || 1) * 1.20;
+        state.seniorityGranted['Senior'] = true;
+        // unlock mentorship/agents mechanic
+        state.agents = state.agents || { count:0, level:0, xpPerAgent:1, cap:3 };
+        state.allowAgents = true;
+        state.pendingPromotion = 'Senior';
+        saveStatus.textContent = 'Promotion! You are now a Senior Developer. You can recruit AI agents.';
+        scheduleSave();
+        // show framework overlay as a continuation point but still show Senior promotion banner if needed
+        showFrameworkOverlay();
+        return;
+      }
+      // If all Senior projects complete, promote to Lead (unlock leadership)
+      if(doneAll && state.seniority === 'Senior'){
+        state.seniority = 'Lead';
+        // apply +30% coin baseline for Lead
+        state.senioritySalaryMult = (state.senioritySalaryMult || 1) * 1.30;
+        state.seniorityGranted['Lead'] = true;
+        state.allowLeadership = true;
+        state.pendingPromotion = 'Lead';
+        saveStatus.textContent = 'Promotion! You are now a Lead Developer.';
+        scheduleSave();
+        // show lead choice overlay to pick path for Lead projects
+        const overlay = document.getElementById('leadChoiceOverlay'); if(overlay) overlay.style.display='flex';
+        renderHeader();
+        return;
+      }
+      // If all Lead projects complete, trigger endgame/retirement
+      if(doneAll && state.seniority === 'Lead'){
+        // mark game as finished
+        state.gameOver = true;
+        scheduleSave();
+        renderHeader();
+        // show retirement overlay and fireworks
+        endGame();
+        return;
+      }
+    }
+  }
+}
+
+// Endgame / Retirement helpers
+function endGame(){
+  try{
+    state.gameOver = true;
+    // summarize achievements
+    const summary = [];
+    summary.push(`Final Seniority: ${state.seniority}`);
+    summary.push(`Total XP: ${Math.floor(state.totalXp||0)}`);
+    summary.push(`Total Coins: ${Math.floor(state.totalCoins||0)}`);
+    summary.push(`AI Agents: ${state.agents && state.agents.count || 0}`);
+    const s = document.getElementById('retireSummary'); if(s) s.textContent = summary.join(' • ');
+    // Save a Hall of Fame entry and then show overlay
+    const entry = {
+      name: state.persona || 'Player',
+      when: Date.now(),
+      seniority: state.seniority || 'Lead',
+      xp: Math.floor(state.totalXp||0),
+      coins: Math.floor(state.totalCoins||0),
+      agents: state.agents && state.agents.count || 0
+    };
+    saveHallOfFameEntry(entry);
+    showRetirementOverlay();
+    renderHallOfFame();
+    // celebratory confetti
+    for(let i=0;i<40;i++) setTimeout(()=> fireConfetti(), i*60);
+    // disable active interactions
+    try{ document.getElementById('leadChoiceOverlay').style.display='none'; }catch(e){}
+  }catch(e){ console.error('endGame error', e); }
+}
+
+// Hall of Fame: persist last N entries in localStorage
+function loadHallOfFame(){
+  try{
+    const raw = localStorage.getItem('clickerHall');
+    if(!raw) return [];
+    return JSON.parse(raw) || [];
+  }catch(e){ return []; }
+}
+
+function saveHallOfFameEntry(entry){
+  try{
+    const list = loadHallOfFame();
+    list.unshift(entry);
+    // cap at 10 entries
+    while(list.length > 10) list.pop();
+    localStorage.setItem('clickerHall', JSON.stringify(list));
+  }catch(e){ console.error('saveHallOfFameEntry error', e); }
+}
+
+function renderHallOfFame(){
+  try{
+    const list = loadHallOfFame();
+    const el = document.getElementById('hallOfFameList');
+    if(!el) return;
+    el.innerHTML = '';
+    if(list.length === 0){ el.textContent = 'No entries yet.'; return; }
+    for(const it of list){
+      const d = new Date(it.when);
+      const row = document.createElement('div');
+      row.style.padding = '6px 0';
+      row.style.borderBottom = '1px dashed rgba(255,255,255,0.04)';
+      row.innerHTML = `<strong>${it.name}</strong> — ${it.seniority} • XP:${it.xp} • Coins:${it.coins} <div style="font-size:11px; color:#9aa0a6;">${d.toLocaleString()}</div>`;
+      el.appendChild(row);
+    }
+  }catch(e){ console.error('renderHallOfFame error', e); }
+}
+
+function showRetirementOverlay(){
+  try{ const o = document.getElementById('retirementOverlay'); if(o) o.style.display = 'flex'; }catch(e){}
+}
+
+// Small initializer: wire SFX style toggle button if present
+(function wireSfxStyleBtn(){
+  try{
+    // ensure the global style exists
+    if(!window.__clickerAudio) window.__clickerAudio = { play: function(){}, style: 'mech' };
+    function initOption(){
+      const opt = document.getElementById('sfxStyleOption');
+      if(!opt) return;
+      opt.textContent = window.__clickerAudio.style || 'mech';
+      opt.onclick = ()=>{
+        const next = (window.__clickerAudio.style === 'thud') ? 'mech' : 'thud';
+        window.__clickerAudio.style = next;
+        opt.textContent = next;
+        showToast(`SFX style: ${next}`, 'info', 900);
+      };
+    }
+    // initialize now if drawer already present
+    initOption();
+    // also re-init when the More drawer is toggled open
+    const moreBtn = document.getElementById('moreBtn');
+    if(moreBtn){
+      moreBtn.addEventListener('click', ()=>{ setTimeout(initOption, 30); });
+    }
+  }catch(e){}
+})();
+
+function hideRetirementOverlay(){
+  try{ const o = document.getElementById('retirementOverlay'); if(o) o.style.display = 'none'; }catch(e){}
+}
+
+function fireConfetti(){
+  try{
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.style.left = Math.random()*100 + '%';
+    el.style.background = ['#ffd35a','#ff7da1','#7de37d','#7db7e3'][Math.floor(Math.random()*4)];
+    el.style.transform = `translateY(-20vh) rotate(${Math.random()*360}deg)`;
+    el.style.width = (6+Math.floor(Math.random()*10))+'px';
+    el.style.height = (8+Math.floor(Math.random()*12))+'px';
+    el.style.opacity = 0.95;
+    document.body.appendChild(el);
+    setTimeout(()=> el.remove(), 2600);
+  }catch(e){/* ignore */}
+}
+
+// wire retire button to reset to start (or restart the game)
+document.addEventListener('click', (ev)=>{
+  const t = ev.target;
+  if(!t) return;
+  if(t.id === 'retireCloseBtn'){
+    hideRetirementOverlay();
+    // Reset the game for a fresh run while preserving localStorage save if desired
+    // We'll prompt the player: restart now?
+    if(confirm('Restart the game now?')){
+      reset();
+    }
+  }
+});
+
+// small toast helper
+function showToast(text, level='info', ttl=3000){
+  try{
+    const t = document.createElement('div');
+    t.className = `toast ${level}`;
+    t.textContent = text;
+    document.body.appendChild(t);
+    setTimeout(()=> t.style.opacity = '0', ttl-400);
+    setTimeout(()=> t.remove(), ttl);
+  }catch(e){/* ignore */}
+}
+
+// Start the next available project for the current seniority if none active
+function tryStartNextProject(){
+  // don't start projects before the game has begun
+  if(!state.started) return;
+  const projects = currentProjects();
+  // pick the next project that is not completed
+  for(const proj of projects){
+    if(!state.completedProjects.includes(proj.id)){
+      // if there is already a current project, don't start another
+      if(state.currentProjectId && state.currentProjectId !== proj.id) return;
+      // If we're Lead and no path chosen yet, pause and ask the player
+      if(state.seniority === 'Lead' && !state.leadPath && state.allowLeadership){
+        // show choice overlay and await player's selection
+        const overlay = document.getElementById('leadChoiceOverlay');
+        const info = document.getElementById('leadChoiceInfo');
+        if(overlay){
+          info.innerHTML = `<p class="small">Project: ${proj.name}</p><p class="small">Choose Corporate for safe rewards or Startup for higher upside with risk.</p>`;
+          overlay.style.display = 'flex';
+        }
+        return;
+      }
+      state.currentProjectId = proj.id;
+      // auto-start the first task of the project
+      const firstTaskId = proj.tasks[0];
+      if(firstTaskId) startTask(firstTaskId);
+      scheduleSave();
+      renderTasks();
+      return;
+    }
+  }
+}
+
+// Lead choice buttons
+document.getElementById('chooseCorporate')?.addEventListener('click', ()=>{
+  state.leadPath = 'Corporate'; state.leadChoices['leadPath'] = 'Corporate';
+  // materialize Lead tasks/projects into seniorityLevels for consistency
+  seniorityLevels['Lead'] = { tasks: LEAD_BRANCHES['Corporate'].tasks.slice(), projects: LEAD_BRANCHES['Corporate'].projects.slice() };
+  state.pendingPromotion = null;
+  const overlay = document.getElementById('leadChoiceOverlay'); if(overlay) overlay.style.display='none';
+  scheduleSave(); renderHeader(); tryStartNextProject();
+});
+document.getElementById('chooseStartup')?.addEventListener('click', ()=>{
+  state.leadPath = 'Startup'; state.leadChoices['leadPath'] = 'Startup';
+  seniorityLevels['Lead'] = { tasks: LEAD_BRANCHES['Startup'].tasks.slice(), projects: LEAD_BRANCHES['Startup'].projects.slice() };
+  state.pendingPromotion = null;
+  const overlay = document.getElementById('leadChoiceOverlay'); if(overlay) overlay.style.display='none';
+  scheduleSave(); renderHeader(); tryStartNextProject();
+});
+
+// Leadership skills rendering and purchases
+const LEAD_SKILLS = [
+  { id:'delegation', name:'Delegation', desc:'Agents generate +0.5 XP/sec each.', costXP:300 },
+  { id:'vision', name:'Vision', desc:'+10% XP from framework-influenced tasks.', costXP:400 },
+  { id:'influence', name:'Influence', desc:'Reduce frequency of random setbacks by 10%.', costXP:350 }
+];
+function renderLeadSkillList(){
+  const panel = document.getElementById('leadSkillsPanel');
+  const list = document.getElementById('leadSkillList');
+  if(!panel || !list) return;
+  if(!state.leadSkillsUnlocked){ panel.style.display='none'; return; }
+  panel.style.display='block';
+  list.innerHTML = '';
+  state.leadershipSkills = state.leadershipSkills || {};
+  for(const s of LEAD_SKILLS){
+    const owned = state.leadershipSkills[s.id];
+    const el = document.createElement('div'); el.className='row';
+    el.innerHTML = `<div style="flex:1"><h4>${s.name} ${owned?'<small>(Owned)</small>':''}</h4><p class="small">${s.desc}</p></div><button class="leadSkillBtn" data-id="${s.id}" ${owned? 'disabled':''}>Buy (${fmt(s.costXP)} XP)</button>`;
+    list.appendChild(el);
+  }
+  list.onclick = (e)=>{
+    const btn = e.target.closest && e.target.closest('.leadSkillBtn'); if(!btn) return; const id = btn.dataset.id; const skill = LEAD_SKILLS.find(x=>x.id===id); if(!skill) return;
+    if((state.xp||0) < skill.costXP){ saveStatus.textContent='Not enough XP'; setTimeout(()=> saveStatus.textContent='Autosaves every 10s',1500); return; }
+    state.xp -= skill.costXP; state.leadershipSkills[id] = true;
+    // apply immediate effects
+    if(id === 'delegation'){ state.agents = state.agents || { count:0, xpPerAgent:1 }; state.agents.xpPerAgent = (state.agents.xpPerAgent || 1) + 0.5; }
+    if(id === 'vision'){ state.leadVision = true; }
+    if(id === 'influence'){ state.leadInfluence = true; }
+    scheduleSave(); renderLeadSkillList(); renderHeader();
+  };
+}
+
+function renderProjects(container){
+  // container is the tasksList element where project summaries will be prepended
+  if(!container) return;
+  // clear existing project area if present
+  const existing = container.querySelector('.projectsArea');
+  if(existing) existing.remove();
+  const pa = document.createElement('div');
+  pa.className = 'projectsArea';
+  pa.style.display = 'flex';
+  pa.style.flexDirection = 'column';
+  pa.style.gap = '6px';
+
+  const projects = currentProjects();
+  // prefer showing only the current project or the first incomplete one
+  let projectsToShow = [];
+  if(state.currentProjectId){
+    projectsToShow = projects.filter(p=>p.id === state.currentProjectId);
+  } else {
+    projectsToShow = projects.filter(p=> !state.completedProjects.includes(p.id));
+    if(projectsToShow.length > 1) projectsToShow = [projectsToShow[0]];
+  }
+  for(const proj of projectsToShow){
+    const done = proj.tasks.filter(tid => state.completedTasks.includes(tid)).length;
+    const el = document.createElement('div');
+    el.className = 'row';
+    // project progress bar (tasks completed)
+    const projPct = proj.tasks.length ? Math.min(100, Math.round((done / proj.tasks.length) * 100)) : 0;
+    el.innerHTML = `
+      <div style="flex:1">
+        <h4>${proj.name}</h4>
+        <div class="progress-row">
+          <div class="progress-label">Project: ${done} / ${proj.tasks.length} tasks</div>
+          <div style="flex:1">
+            <div class="progress"><div class="progress-fill" style="width:${projPct}%"></div></div>
+          </div>
+          <div class="progress-label">${projPct}%</div>
+        </div>
+        <p class="small">Reward: ${proj.reward && proj.reward.type === 'unlockSkills' ? 'Unlock Skills Panel' : (proj.reward && proj.reward.type === 'xpMult' ? '+XP Mult' : '—')}</p>
+      </div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        ${done >= proj.tasks.length ? '<button disabled>Completed</button>' : ''}
+      </div>
+    `;
+  pa.appendChild(el);
+  }
+  container.prepend(pa);
+}
+
+// Render the new Character panel which shows player status, attributes, and inventory
+function renderCharacterPanel(){
+  const root = document.getElementById('characterSummary');
+  if(!root) return;
+  root.innerHTML = '';
+  const persona = PERSONAS.find(p=>p.id===state.persona);
+  const work = WORKSTYLES.find(w=>w.id===state.workstyle);
+  const frag = document.createDocumentFragment();
+
+  const top = document.createElement('div'); top.className = 'row';
+  top.innerHTML = `<div style="flex:1"><h4>Persona</h4><p class="small">${persona ? persona.name : '—'}</p><p class="small">${persona ? (persona.desc||'') : ''}</p></div>`;
+  frag.appendChild(top);
+
+  const ws = document.createElement('div'); ws.className = 'row';
+  ws.innerHTML = `<div style="flex:1"><h4>Workstyle</h4><p class="small">${work ? work.name : '—'}</p><p class="small">${work ? (work.bonus||'') : ''}</p></div>`;
+  frag.appendChild(ws);
+
+  const attrs = document.createElement('div'); attrs.className = 'row';
+  const a = state.attributes || { intelligence:0, focus:0, creativity:0, stamina:0 };
+  attrs.innerHTML = `<div style="flex:1"><h4>Attributes</h4><p class="small">INT: ${a.intelligence} | FOC: ${a.focus} | CRE: ${a.creativity} | STA: ${a.stamina}</p></div>`;
+  frag.appendChild(attrs);
+
+  const stats = document.createElement('div'); stats.className = 'row';
+  stats.innerHTML = `<div style="flex:1"><h4>Resources</h4><p class="small">Coins: ${fmt(state.coins)} — XP: ${fmt(Math.floor(state.xp||0))} — LOC: ${fmt(state.linesOfCode||0)}</p></div>`;
+  frag.appendChild(stats);
+
+  const inv = document.createElement('div'); inv.className = 'row';
+  const agentsCount = (state.agents && state.agents.count) || 0;
+  const perAgent = (state.agents && state.agents.xpPerAgent) || 1;
+  const agentsPerSec = agentsCount * perAgent;
+  inv.innerHTML = `<div style="flex:1"><h4>Inventory</h4><p class="small">Agents: ${agentsCount} (XP/sec: +${agentsPerSec}) — Accessories: ${(state.accessories||[]).length}</p></div>`;
+  frag.appendChild(inv);
+
+  // show agent avatars if any
+  const avatarRow = document.createElement('div'); avatarRow.className = 'row';
+  const agentCount = (state.agents && state.agents.count) || 0;
+  let avatarsHtml = '<div style="flex:1"><h4>Agents</h4><p class="small">';
+  if(agentCount > 0){
+    avatarsHtml += '<span class="agentRow">';
+    for(let i=0;i<agentCount;i++) avatarsHtml += '<span class="agentAvatar small"></span>';
+    avatarsHtml += `</span> <span style="margin-left:8px;">${agentCount} (XP/sec: +${agentCount * ((state.agents && state.agents.xpPerAgent)||1)})</span>`;
+  } else {
+    avatarsHtml += 'None recruited yet.';
+  }
+  avatarsHtml += '</p></div>';
+  avatarRow.innerHTML = avatarsHtml;
+  frag.appendChild(avatarRow);
+
+  const skillsRow = document.createElement('div'); skillsRow.className = 'row';
+  const ownedSkills = (state.skills && Object.keys(state.skills)) || [];
+  skillsRow.innerHTML = `<div style="flex:1"><h4>Skills</h4><p class="small">${ownedSkills.length ? ownedSkills.join(', ') : 'None'}</p></div>`;
+  frag.appendChild(skillsRow);
+
+  const fwRow = document.createElement('div'); fwRow.className = 'row';
+  const fw = FRAMEWORKS.find(f=>f.id===state.framework);
+  fwRow.innerHTML = `<div style="flex:1"><h4>Framework</h4><p class="small">${fw ? fw.name + ' — ' + (fw.desc||'') : 'None selected'}</p></div>`;
+  frag.appendChild(fwRow);
+
+  const equipRow = document.createElement('div'); equipRow.className = 'row';
+  equipRow.innerHTML = `<div style="flex:1"><h4>Equipment</h4><p class="small">Slots: ${state.equipmentSlots || 0} — Rare Accessories: ${state.rareAccessoriesUnlocked ? 'Unlocked' : 'Locked'}</p></div>`;
+  frag.appendChild(equipRow);
+
+  root.appendChild(frag);
+}
+
+function renderTasks(){
+  const list = document.getElementById('tasksList');
+  const inline = document.getElementById('tasksInlineList');
+  if(!list) return;
+  // if we're suppressed and no active task, skip rendering the full list to avoid a flash
+  if(suppressNextFullTaskRender && !state.activeTask) return;
+  if(inline) inline.innerHTML = '';
+  list.innerHTML = '';
+
+  // render projects summary at the top (both side panel and inline)
+  renderProjects(list);
+  if(inline) renderProjects(inline);
+
+  if(state.activeTask){
+    const t = state.activeTask;
+    const el = document.createElement('div');
+    el.className = 'row';
+    el.innerHTML = `
+      <div style="flex:1">
+        <h4>${t.name}</h4>
+        <p class="small">${t.desc}</p>
+        <div class="progress-row" style="margin-top:6px;">
+          <div class="progress-label">Task: ${ (typeof t.progress === 'number' ? Math.floor(t.progress) : Math.floor(t.progress)) } / ${t.required} lines</div>
+          <div style="flex:1">
+            <div class="progress"><div class="progress-fill" style="width:${ Math.min(100, Math.round(((t.progress||0)/t.required) * 100)) }%"></div></div>
+          </div>
+          <div class="progress-label">${ Math.min(100, Math.round(((t.progress||0)/t.required) * 100)) }%</div>
+        </div>
+      </div>
+    `;
+    list.appendChild(el);
+    if(inline) inline.appendChild(el.cloneNode(true));
+    return;
+  }
+
+  // no active task: show available tasks (disable ones already completed)
+  for(const t of currentTasks()){
+    const completed = state.completedTasks.includes(t.id);
+    const el = document.createElement('div');
+    el.className = 'row';
+    const icon = (t.type === 'bug') ? '🐞' : (t.type === 'design' || t.type === 'doc') ? '📄' : (t.type === 'deploy' ? '🚀' : '⌨️');
+    el.innerHTML = `
+      <div style="flex:1">
+        <h4><span class="taskIcon">${icon}</span>${t.name} ${completed ? '✅' : ''}</h4>
+        <p class="small">${t.desc}</p>
+        <p class="small">Work required: ${fmt(t.required)} — ${t.xpPerClick || 0} XP/click</p>
+      </div>
+      <button class="startTaskBtn" data-id="${t.id}" ${completed ? 'disabled' : ''}>${completed ? 'Completed' : 'Start'}</button>
+    `;
+  list.appendChild(el);
+  if(inline) inline.appendChild(el.cloneNode(true));
+  }
+
+  const onclickHandler = (e)=>{
+    const btn = e.target.closest && e.target.closest('.startTaskBtn');
+    if(!btn) return;
+    startTask(btn.dataset.id);
+    renderTasks();
+  };
+  list.onclick = onclickHandler;
+  if(inline) inline.onclick = onclickHandler;
+}
+
+function startTask(id){
+  // disallow manual starts before game start
+  if(!state.started) return;
+  const t = currentTasks().find(x=>x.id===id);
+  if(!t) return;
+  // enforce that the task belongs to the current project if a project is active
+  if(state.currentProjectId){
+    const proj = currentProjects().find(p=>p.id === state.currentProjectId);
+    if(proj && !proj.tasks.includes(id)){
+      // cannot start task outside of current project
+      saveStatus.textContent = 'That task is not part of your current project.';
+      setTimeout(()=> saveStatus.textContent='Autosaves every 10s', 1500);
+      return;
+    }
+  }
+  // compute effective required work and salary using helpers
+  const required = computeEffectiveRequired(t);
+  const salary = computeEffectiveSalary(t);
+
+  state.activeTask = { id: t.id, name: t.name, type: t.type || 'coding', required: required, baseRequired: required, maxRequired: Math.max(required, Math.ceil(required * 2.0)), progress: 0, salary: salary, desc: t.desc, xpPerClick: t.xpPerClick || 0 };
+  scheduleSave();
+  renderHeader();
+  // ensure task panels update immediately when a task starts
+  suppressNextFullTaskRender = false;
+  try{ renderTasks(); }catch(e){}
+}
+
+// Compute effective required work for a task based on attributes, skills, frameworks
+function computeEffectiveRequired(t){
+  let required = t.required;
+  const attrs = state.attributes || { intelligence:0, focus:0, creativity:0, stamina:0 };
+  // Focus reduces Coding required by 1% per Focus point (clamped)
+  if(t.type === 'coding'){
+    const focus = attrs.focus || 0;
+    required = Math.max(1, Math.ceil(required * (1 - Math.min(0.5, focus * 0.01))));
+  }
+  // Skills that reduce required via taskType modifiers
+  if(state.skills){
+    for(const sid of Object.keys(state.skills)){
+      const s = SKILLS.find(x=>x.id===sid);
+      if(s && s.apply && s.apply.taskType === t.type && s.apply.requiredMult){
+        required = Math.max(1, Math.ceil(required * s.apply.requiredMult));
+      }
+    }
+  }
+  // frameworks that affect required
+  if(state.framework){
+    const fw = FRAMEWORKS.find(f=>f.id === state.framework);
+    if(fw && fw.effects && fw.effects.requiredMult){
+      required = Math.max(1, Math.ceil(required * fw.effects.requiredMult));
+    }
+  }
+  return required;
+}
+
+// Compute effective salary for a task based on seniority, creativity, skills, frameworks
+function computeEffectiveSalary(t){
+  let rewardBase = (t.salary || 0);
+  let rewardMult = (state.senioritySalaryMult || 1);
+  if(t.type === 'design'){
+    const creativity = (state.attributes && state.attributes.creativity) || 0;
+    rewardMult *= (1 + Math.min(1.0, creativity * 0.01));
+    if(state.skills && state.skills['designersEye']){
+      const s = SKILLS.find(x=>x.id==='designersEye');
+      if(s && s.apply && s.apply.salaryMult) rewardMult *= s.apply.salaryMult;
+    }
+  }
+  if(state.frameworks && state.frameworks.includes('agileKit')){
+    rewardMult *= 0.90; // Agile Kit penalty
+  }
+  return Math.floor(rewardBase * rewardMult);
+}
+
+function completeTask(){
+  if(!state.activeTask) return;
+  const taskId = state.activeTask.id;
+  // apply salary adjustments: seniority, creativity for design tasks, and framework tradeoffs
+  const rewardBase = (state.activeTask.salary || 0);
+  let rewardMult = (state.senioritySalaryMult || 1);
+  // creativity increases design payouts
+  if(state.activeTask.type === 'design'){
+    const creativity = (state.attributes && state.attributes.creativity) || 0;
+    rewardMult *= (1 + Math.min(1.0, creativity * 0.01)); // up to +100%
+    // skills that boost salary for design
+    if(state.skills && state.skills['designersEye']){
+      const s = SKILLS.find(x=>x.id==='designersEye');
+      if(s && s.apply && s.apply.salaryMult) rewardMult *= s.apply.salaryMult;
+    }
+  }
+  // frameworks may reduce salary (tradeoffs)
+  if(state.frameworks && state.frameworks.includes('agileKit')){
+    rewardMult *= 0.90; // Agile Kit penalty: -10% payout
+  }
+  const reward = Math.floor(rewardBase * rewardMult);
+  state.coins = (state.coins || 0) + reward;
+  state.totalCoins = (state.totalCoins || 0) + reward;
+  // award fixed XP reward if defined on task, otherwise small percent bonus
+  const taskDef = currentTasks().find(x=>x.id===taskId) || {};
+  const awardXP = taskDef.rewardXP || Math.max(5, Math.floor((state.xp || 0) * 0.03));
+  state.xp = (state.xp || 0) + awardXP;
+  state.totalXp = (state.totalXp || 0) + awardXP;
+  // record completion for projects
+  state.completedTasks = state.completedTasks || [];
+  if(!state.completedTasks.includes(taskId)) state.completedTasks.push(taskId);
+  // small chance for an accessory
+  if(Math.random() < 0.12){
+    state.accessories = state.accessories || [];
+    state.accessories.push('Accessory-'+Math.floor(Math.random()*1000));
+    saveStatus.textContent = 'Found an accessory!';
+    setTimeout(()=> saveStatus.textContent='Autosaves every 10s', 2000);
+  }
+  state.activeTask = null;
+  scheduleSave();
+  // check for project completion (may unlock frameworks)
+  // If there is a current project and it's not yet complete, immediately start the next task to avoid UI flicker
+  if(state.currentProjectId){
+    const proj = currentProjects().find(p=>p.id === state.currentProjectId);
+    if(proj){
+      const next = proj.tasks.find(tid => !state.completedTasks.includes(tid));
+      if(next){
+  // suppress the interim full-list render, then start next task immediately
+  suppressNextFullTaskRender = true;
+  if(state.started) startTask(next);
+  // small defer to ensure the suppress flag is not permanent; clear on next tick
+  setTimeout(()=>{ suppressNextFullTaskRender = false; }, 50);
+  return;
+      }
+    }
+  }
+  checkProjectsCompletion();
+  // also check for seniority promotions after gaining lifetime XP
+  checkSeniorityPromotions();
+  renderHeader();
+  renderTasks();
+}
+
+/* =========================
+   Promotion & Career Changes
+   ========================= */
+function showPromotionOverlay(){
+  // populate promotion options based on available workstyles
+  const list = document.getElementById('promotionWorkstyleList');
+  list.innerHTML = '';
+  for(const style of WORKSTYLES){
+    const el = document.createElement('div');
+    el.className = 'row';
+    el.innerHTML = `
+      <div style="flex:1">
+        <h4>${style.name}</h4>
+        <p class="small">${style.bonus}</p>
+      </div>
+      <button class="chooseWorkstyle" data-id="${style.id}">
+        Select
+      </button>
+    `;
+    list.appendChild(el);
+  }
+  // show overlay
+  promotionOverlay.style.display = 'flex';
+}
+
+function showFrameworkOverlay(){
+  const el = document.getElementById('frameworkOverlay');
+  const list = document.getElementById('frameworkList');
+  if(!el || !list) return;
+  list.innerHTML = '';
+  // if this overlay is shown because of a promotion, show a short promotion banner
+  const banner = el.querySelector('.promoBanner');
+  if(banner){
+    if(state.pendingPromotion){
+      banner.style.display = 'block';
+      banner.textContent = `You've been promoted to ${state.pendingPromotion}! Choose a framework to continue.`;
+  banner.classList.add('pulse');
+  try{ celebratePromotion(state.pendingPromotion); promotionBurst(state.pendingPromotion); }catch(e){}
+    } else {
+  banner.style.display = 'none';
+  banner.classList.remove('pulse');
+    }
+  }
+  for(const f of FRAMEWORKS){
+    const d = document.createElement('div'); d.className = 'choice';
+    d.innerHTML = `<h4>${f.name}</h4><p class="small">${f.desc}</p><div style="text-align:right; margin-top:6px;"><button class="chooseFramework" data-id="${f.id}">Choose</button></div>`;
+    list.appendChild(d);
+  }
+  el.style.display = 'flex';
+}
+
+document.getElementById('frameworkList')?.addEventListener('click', (e)=>{
+  const btn = e.target.closest && e.target.closest('.chooseFramework');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  state.framework = id;
+  state.frameworkLocked = state.seniority;
+  // apply instant effects for certain frameworks
+  const fw = FRAMEWORKS.find(x=>x.id===id);
+  if(fw){
+    if(fw.id === 'agileKit'){
+      // no immediate reward beyond task reduction
+    } else if(fw.id === 'reactStarter'){
+      // nothing immediate
+    } else if(fw.id === 'ciCd'){
+      // unlock a small visible hint
+      state.rareAccessoriesUnlocked = true;
+    }
+  }
+  scheduleSave();
+  renderHeader();
+  // hide overlay and resume by starting next project
+  const el = document.getElementById('frameworkOverlay'); if(el) el.style.display='none';
+  // clear any pending promotion now that selection made
+  if(state.pendingPromotion) delete state.pendingPromotion;
+  tryStartNextProject();
+});
+
+document.getElementById('frameworkSkip')?.addEventListener('click', ()=>{ const el = document.getElementById('frameworkOverlay'); if(el) el.style.display='none'; if(state.pendingPromotion) delete state.pendingPromotion; tryStartNextProject(); });
+
+document.getElementById('promotionSkipBtn').addEventListener('click', ()=>{
+  promotionOverlay.style.display = 'none';
+  scheduleSave();
+});
+
+document.getElementById('promotionWorkstyleList').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.chooseWorkstyle');
+  if(!btn) return;
+  const newWorkstyle = btn.dataset.id;
+  // apply new workstyle
+  state.workstyle = newWorkstyle;
+  // grant bonus attributes
+  const bonusAttrs = getWorkstyleAttributes();
+  for(const [key, value] of Object.entries(bonusAttrs)){
+    state.attributes[key] = (state.attributes[key] || 0) + value;
+  }
+  // close overlay
+  promotionOverlay.style.display = 'none';
+  // save game
+  scheduleSave();
+  // update UI
+  renderHeader();
+  updateShop();
+});
+
+function renderStartOverlayChoices(){
+  // Personas
+  const pList = document.getElementById('overlayPersonaList');
+  const wList = document.getElementById('overlayWorkstyleList');
+  if(!pList || !wList) return;
+  pList.innerHTML = '';
+  wList.innerHTML = '';
+  for(const p of PERSONAS){
+    const el = document.createElement('div');
+    el.className = 'overlayChoice';
+    el.innerHTML = `<h4 style="margin:0">${p.name}</h4><p class="small">${p.desc || ''}</p><div style="text-align:right; margin-top:6px;"><button class="choosePersona" data-id="${p.id}">Choose</button></div>`;
+    pList.appendChild(el);
+  }
+  for(const w of WORKSTYLES){
+    const el = document.createElement('div');
+    el.className = 'overlayChoice';
+    el.innerHTML = `<h4 style="margin:0">${w.name}</h4><p class="small">${w.bonus || ''}</p><div style="text-align:right; margin-top:6px;"><button class="chooseWorkstyle" data-id="${w.id}">Choose</button></div>`;
+    wList.appendChild(el);
+  }
+}
+
+// Handle selection clicks inside the overlay lists
+document.addEventListener('click', (e)=>{
+  const pBtn = e.target.closest && e.target.closest('.choosePersona');
+  if(pBtn){
+    const id = pBtn.dataset.id;
+    state.persona = id;
+    // visually mark selection
+    const buttons = document.querySelectorAll('#overlayPersonaList .overlayChoice');
+    buttons.forEach(b=> {
+      const btn = b.querySelector('.choosePersona');
+      const is = btn && btn.dataset.id === id;
+      b.classList.toggle('picked', is);
+      if(btn) btn.textContent = is ? 'choosed' : 'Choose';
+    });
+    // update start button state (do not auto-start)
+    updateStartButtonState();
+    renderHeader();
+    return;
+  }
+  const wBtn = e.target.closest && e.target.closest('.chooseWorkstyle');
+  if(wBtn){
+    const id = wBtn.dataset.id;
+    state.workstyle = id;
+    const buttons = document.querySelectorAll('#overlayWorkstyleList .overlayChoice');
+    buttons.forEach(b=> {
+      const btn = b.querySelector('.chooseWorkstyle');
+      const is = btn && btn.dataset.id === id;
+      b.classList.toggle('picked', is);
+      if(btn) btn.textContent = is ? 'choosed' : 'Choose';
+    });
+    updateStartButtonState();
+    renderHeader();
+    return;
+  }
+});
+
+// Manage the start button enabled state
+function updateStartButtonState(){
+  const btn = document.getElementById('startBtn');
+  if(!btn) return;
+  if(state.persona && state.workstyle){
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+  }
+}
+
+// Wire the explicit start button so the player confirms choices
+const startBtn = document.getElementById('startBtn');
+if(startBtn){
+  startBtn.addEventListener('click', ()=>{
+    if(!state.persona || !state.workstyle) return;
+    // apply starting attributes and start the game
+    applyStartingAttributes();
+    state.started = true;
+    overlay.style.display = 'none';
+  try{ updateGameInteractivity(); }catch(e){}
+    scheduleSave();
+    renderHeader();
+  // show the task list right away
+  try{ renderTasks(); }catch(e){}
+  // ensure a project is active and start its first task
+  tryStartNextProject();
+  });
+}
+
+/* =========================
+   Init & Load
+   ========================= */
+load();
+renderStartOverlayChoices();
+if(!state.started){ overlay.style.display = 'flex'; }
+try{ updateGameInteractivity(); }catch(e){}
+checkStart();
+gameLoop();
+// if game already started and no current project, start first available project
+if(state.started && !state.currentProjectId){ tryStartNextProject(); }
+
+// Add tab switching setup so panels are shown when clicking tabs
+function setupTabs(){
+  const tabs = document.getElementById('tabs');
+  if(!tabs) return;
+  tabs.addEventListener('click', (e)=>{
+    const btn = e.target.closest && e.target.closest('.tabbtn');
+    if(!btn) return;
+  // ignore clicks on disabled tabs
+  if(btn.classList.contains && btn.classList.contains('disabled')) return;
+  // update active button
+    document.querySelectorAll('#tabs .tabbtn').forEach(b=> b.classList.remove('active'));
+    btn.classList.add('active');
+    // hide all panels
+    document.querySelectorAll('aside .panel').forEach(p=> p.style.display = 'none');
+    const panel = document.getElementById(`panel-${btn.dataset.tab}`);
+    if(panel) panel.style.display = 'block';
+    // render any panels that need dynamic content
+    if(btn.dataset.tab === 'tasks') renderTasks();
+    if(btn.dataset.tab === 'skills'){
+      // mark that the player has seen the skills panel so the NEW badge disappears
+      if(!state.skillsSeen){ state.skillsSeen = true; scheduleSave(); }
+      renderSkills();
+    }
+  if(btn.dataset.tab === 'shop') renderShop();
+  if(btn.dataset.tab === 'character') renderCharacterPanel();
+  });
+}
+
+// initialize tabs after DOM setup
+setupTabs();
+
+// Wire the compact header 'More' button to toggle the drawer
+document.getElementById('moreBtn')?.addEventListener('click', ()=>{
+  try{
+    const d = document.getElementById('moreDrawer'); if(!d) return;
+    const btn = document.getElementById('moreBtn');
+    const isHidden = (d.style.display === 'none' || d.style.display === '');
+    d.style.display = isHidden ? 'block' : 'none';
+    d.setAttribute('aria-hidden', isHidden ? 'false' : 'true');
+    if(btn) btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+  try{ if(isHidden) updateDeveloperProfile(); }catch(e){}
+  }catch(e){}
+});
+
+// Respect OS reduced-motion preference by adding a class to the documentElement
+try{
+  const mq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+  const apply = (m)=>{
+    if(m && m.matches) document.documentElement.classList.add('reduced-motion');
+    else document.documentElement.classList.remove('reduced-motion');
+  };
+  if(mq){ apply(mq); if(mq.addEventListener) mq.addEventListener('change', ()=>apply(mq)); else if(mq.addListener) mq.addListener(()=>apply(mq)); }
+}catch(e){ /* ignore */ }
+
+// Developer profile updater: fills the summary card values dynamically
+function updateDeveloperProfile(){
+  try{
+    const p = document.getElementById('dp-persona'); if(p) p.textContent = state.persona ? (PERSONAS.find(x=>x.id===state.persona)?.name || state.persona) : '—';
+    const w = document.getElementById('dp-workstyle'); if(w) w.textContent = state.workstyle ? (WORKSTYLES.find(x=>x.id===state.workstyle)?.name || state.workstyle) : '—';
+    const f = document.getElementById('dp-framework'); if(f) f.textContent = state.framework ? (FRAMEWORKS.find(x=>x.id===state.framework)?.name || state.framework) : '—';
+    const s = document.getElementById('dp-seniority'); if(s) s.textContent = state.seniority || 'Junior';
+    const cm = document.getElementById('dp-clickMult'); if(cm) cm.textContent = ( (state.clickMult || 1) * (getCareerBonus().click || 1) * (getWorkstyleBonus().click || 1) ).toFixed(2) + 'x';
+    const pm = document.getElementById('dp-passive'); if(pm) pm.textContent = totalPassive().toFixed(2);
+  const bc = document.getElementById('dp-baseClick'); if(bc) bc.textContent = Math.max(1, totalClickPower()).toFixed(2);
+    const pb = document.getElementById('dp-projectBonus'); if(pb){
+      // placeholder: compute a simple project bonus if current project exists
+      const proj = (currentProjects()||[]).find(p=>p.id===state.currentProjectId) || null;
+      pb.textContent = proj && proj.reward && proj.reward.type ? proj.reward.type : '—';
+    }
+  }catch(e){ /* ignore profile errors */ }
+}
+
+// Wire save/load/reset buttons and autosave
+(function wireSaveLoad(){
+  const sb = document.getElementById('saveBtn');
+  if(sb) sb.addEventListener('click', ()=>{ saveNow(); renderHeader(); needsShopRefresh=true; needsSkillsRefresh=true; renderTasks(); });
+  const lb = document.getElementById('loadBtn');
+  if(lb) lb.addEventListener('click', ()=>{ load(); renderHeader(); updateShop(); renderTasks(); });
+  const rb = document.getElementById('resetBtn');
+  if(rb) rb.addEventListener('click', ()=>{ reset(); renderHeader(); updateShop(); renderTasks(); });
+  // autosave every 10 seconds
+  try{
+  setInterval(()=>{ saveNow(); }, 10000);
+  }catch(e){ console.error('Autosave setup failed', e); }
+})();
+
+// Mobile Shop overlay: create on demand and wire open/close
+(function setupShopOverlay(){
+  const openBtn = document.getElementById('openShopOverlayBtn');
+  if(!openBtn) return;
+  let overlayEl = null;
+  let keyHandlerRef = null;
+  function closeOverlay(){
+    if(!overlayEl) return;
+    try{ exitModal(); }catch(e){}
+    overlayEl.remove();
+    overlayEl = null;
+    if(keyHandlerRef){
+      try{ document.removeEventListener('keydown', keyHandlerRef); }catch(e){}
+      keyHandlerRef = null;
+    }
+  }
+  openBtn.addEventListener('click', ()=>{
+    if(overlayEl) return;
+    // build overlay
+    try{ enterModal(); }catch(e){}
+    overlayEl = document.createElement('div');
+    overlayEl.className = 'modalBackdrop shopOverlay';
+    const panel = document.createElement('div');
+    panel.className = 'overlayPanel';
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+        <h2 style="margin:0">Shop</h2>
+        <button id="closeShopOverlayBtn" class="btn-yellow secondary" aria-label="Close Shop">Close</button>
+      </div>
+      <div class="list" id="shopOverlayList"></div>
+    `;
+    overlayEl.appendChild(panel);
+    document.body.appendChild(overlayEl);
+    // render shop into overlay list
+    try{ updateShop(document.getElementById('shopOverlayList')); }catch(e){}
+    // close interactions
+    overlayEl.addEventListener('click', (e)=>{
+      if(e.target === overlayEl) closeOverlay();
+    });
+    const closeBtn = panel.querySelector('#closeShopOverlayBtn');
+    if(closeBtn) closeBtn.addEventListener('click', closeOverlay);
+    // ESC to close
+  keyHandlerRef = (ev)=>{ if(ev.key === 'Escape'){ ev.preventDefault(); closeOverlay(); } };
+  document.addEventListener('keydown', keyHandlerRef);
+  });
+})();
+</script>
+</body>
+</html>
